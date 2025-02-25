@@ -9,6 +9,8 @@ __pycache__/
 .idea
 
 out
+build
+dist
 
 # Distribution / packaging
 .Python
