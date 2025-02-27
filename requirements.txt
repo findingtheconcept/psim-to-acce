@@ -1,3 +1,5 @@
-pywebview
+pywebview~=5.4
 openpyxl
-Flask
+Flask~=3.1.0
+ifcopenshell
+requests~=2.32.3
