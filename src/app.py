@@ -1,13 +1,20 @@
-import logging
+import sys
 import os
+import logging
 from threading import Thread
 
 import requests
 from flask import Flask, render_template, request
 import webview
 
-template_folder = os.path.join(os.getcwd(), 'assets')
-static_folder = os.path.join(os.getcwd(), 'static')
+
+if hasattr(sys, '_MEIPASS'):
+    base_path = sys._MEIPASS
+else:
+    base_path = os.path.abspath(".")
+
+template_folder = os.path.join(base_path, 'assets')
+static_folder = os.path.join(base_path, 'static')
 
 app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
 
@@ -47,6 +54,7 @@ def run_flask():
 
 if __name__ == "__main__":
     thread = Thread(target=run_flask)
+    thread.daemon = True
     thread.start()
 
     window = webview.create_window(
