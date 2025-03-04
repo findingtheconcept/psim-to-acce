@@ -7,7 +7,6 @@ import requests
 from flask import Flask, render_template, request
 import webview
 
-
 if hasattr(sys, '_MEIPASS'):
     base_path = sys._MEIPASS
 else:
