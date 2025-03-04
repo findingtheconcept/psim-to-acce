@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PSIM (Excel) to ASSE Converter</title>
+  <title>Конвертер PSIM (Excel) в ASSE</title>
   <link
     rel="stylesheet"
     href="{{ url_for('static', filename='css/bootstrap.min.css') }}"
@@ -23,22 +23,22 @@
 <body>
   <div class="container my-5">
     <div class="main-container">
-      <h1 class="text-center mb-4">PSIM (Excel) to ASSE Converter</h1>
+      <h1 class="text-center mb-4">Конвертер PSIM (Excel) в ASSE</h1>
 
       <div class="row">
         <!-- Left column -->
         <div class="col-md-6 mb-4">
           <div class="card h-100">
             <div class="card-header text-center">
-              <h5 class="card-title mb-0">Load PSIM File</h5>
+              <h5 class="card-title mb-0">Загрузить файл PSIM</h5>
             </div>
             <div class="card-body d-flex flex-column justify-content-center align-items-center">
               <button id="btnSelectPsimFile" class="btn btn-outline-primary mb-3">
-                Choose File
+                Выбрать файл
               </button>
               <input type="file" id="psimFileInput" accept=".xlsx" style="display: none;">
               <p class="text-muted small mb-0">
-                Or drag and drop XLSX here
+                Или перетащите XLSX сюда
               </p>
             </div>
           </div>
@@ -48,14 +48,14 @@
         <div class="col-md-6 mb-4">
           <div class="card h-100">
             <div class="card-header text-center">
-              <h5 class="card-title mb-0">Choose Save Folder</h5>
+              <h5 class="card-title mb-0">Выбрать папку для сохранения</h5>
             </div>
             <div class="card-body d-flex flex-column justify-content-center align-items-center">
               <button id="btnSelectSaveFolder" class="btn btn-outline-primary">
-                Select Folder
+                Выбрать папку
               </button>
               <p class="text-muted small mt-3 mb-0">
-                This is where the ASSE file will be saved
+                Здесь будет сохранен файл ASSE
               </p>
             </div>
           </div>
@@ -64,7 +64,7 @@
 
       <div class="d-flex justify-content-center">
         <button id="btnConvert" class="btn btn-success btn-lg">
-          Convert
+          Конвертировать
         </button>
       </div>
     </div>
