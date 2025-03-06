@@ -2,75 +2,141 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Конвертер PSIM (Excel) в ASSE</title>
-  <link
-    rel="stylesheet"
-    href="{{ url_for('static', filename='css/bootstrap.min.css') }}"
-  />
+
+  <!-- Force the HTML/Body to fill entire 800x680 window -->
   <style>
-    body {
-      background-color: #f8f9fa;
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden; /* No scrolling, we assume fixed size */
+      background-color: #eaeaea; /* Light desktop-like background */
+      font-family: "Segoe UI", Tahoma, sans-serif;
     }
-    .main-container {
+
+    /* A full-window "app" container */
+    .window {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #bcbcbc;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.25);
       background-color: #ffffff;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-      padding: 30px;
     }
+
+    /* Title bar across the top */
+    .title-bar {
+      background: #0078d7; /* Windows-like blue */
+      color: #ffffff;
+      padding: 0.5rem 1rem;
+      font-weight: 600;
+      border-bottom: 1px solid #006abb;
+    }
+
+    /* The main content area below the title bar */
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+      position: relative; /* So we can absolutely-position the alert */
+    }
+
+    /* The row that contains file selection cards */
+    .file-selection-row {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .file-card {
+      flex: 1;
+      border: 1px solid #dcdcdc;
+      border-radius: 4px;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+    }
+    .file-card-header {
+      background: #f5f5f5;
+      padding: 0.75rem;
+      text-align: center;
+      border-bottom: 1px solid #dcdcdc;
+      font-weight: 500;
+    }
+    .file-card-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    /* Convert button row */
+    .button-row {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    /* Progress bar container, hidden by default */
     #progressContainer {
-      display: none; /* hidden by default */
+      display: none;
+      margin-top: 0.5rem;
     }
+
+    /* Absolutely-positioned alert, so it doesn't push content */
     #alertBox {
-      display: none; /* hidden by default */
+      display: none;
+      z-index: 999;
+    }
+
+    /* Basic bootstrap override, if needed */
+    .progress {
+      margin-top: 0.5rem;
     }
   </style>
+
+  <!-- Bootstrap CSS from your static folder -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" />
 </head>
 <body>
-  <div class="container my-5">
-    <div class="main-container">
-      <h1 class="text-center mb-4">Конвертер PSIM (Excel) в ASSE</h1>
+  <div class="window">
+    <!-- Title bar -->
+    <div class="title-bar">Конвертер PSIM (Excel) в ASSE</div>
 
-      <div class="row">
-        <!-- First file selection -->
-        <div class="col-md-6 mb-4">
-          <div class="card h-100">
-            <div class="card-header text-center">
-              <h5 class="card-title mb-0">Выбрать входной файл #1 (PSIM)</h5>
-            </div>
-            <div class="card-body text-center">
-              <button id="btnSelectFile1" class="btn btn-outline-primary mb-3">
-                Выбрать файл
-              </button>
-              <p id="filePath1" class="mt-2 text-muted" style="display: none;"></p>
-            </div>
+    <!-- Main content area -->
+    <div class="content">
+      <!-- The row with two file cards -->
+      <div class="file-selection-row">
+        <!-- File #1 -->
+        <div class="file-card">
+          <div class="file-card-header">Входной файл #1 (PSIM)</div>
+          <div class="file-card-body">
+            <button id="btnSelectFile1" class="btn btn-outline-primary mb-3">Выбрать файл</button>
+            <p id="filePath1" class="mt-2 text-muted" style="display: none;"></p>
           </div>
         </div>
 
-        <!-- Second file selection -->
-        <div class="col-md-6 mb-4">
-          <div class="card h-100">
-            <div class="card-header text-center">
-              <h5 class="card-title mb-0">Выбрать входной файл #2</h5>
-            </div>
-            <div class="card-body text-center">
-              <button id="btnSelectFile2" class="btn btn-outline-primary mb-3">
-                Выбрать файл
-              </button>
-              <p id="filePath2" class="mt-2 text-muted" style="display: none;"></p>
-            </div>
+        <!-- File #2 -->
+        <div class="file-card">
+          <div class="file-card-header">Входной файл #2</div>
+          <div class="file-card-body">
+            <button id="btnSelectFile2" class="btn btn-outline-primary mb-3">Выбрать файл</button>
+            <p id="filePath2" class="mt-2 text-muted" style="display: none;"></p>
           </div>
         </div>
       </div>
 
-      <div class="d-flex justify-content-center mb-3">
-        <button id="btnConvert" class="btn btn-success btn-lg">
-          Конвертировать
-        </button>
+      <!-- Convert button row -->
+      <div class="button-row">
+        <button id="btnConvert" class="btn btn-success btn-lg">Конвертировать</button>
       </div>
 
       <!-- Progress bar -->
-      <div id="progressContainer" class="mb-3">
+      <div id="progressContainer">
         <div class="progress">
           <div
             id="progressBar"
@@ -84,7 +150,7 @@
         </div>
       </div>
 
-      <!-- Alert -->
+      <!-- Alert (position: absolute) -->
       <div id="alertBox" class="alert" role="alert"></div>
     </div>
   </div>
@@ -109,7 +175,6 @@
       hideAlert();
       filePath1.textContent = "";
       filePath1.style.display = 'none';
-
       try {
         const path = await pywebview.api.select_source_file();
         if (path) {
@@ -131,7 +196,6 @@
       hideAlert();
       filePath2.textContent = "";
       filePath2.style.display = 'none';
-
       try {
         const path = await pywebview.api.select_source_file();
         if (path) {
@@ -151,7 +215,6 @@
     // CONVERT
     btnConvert.addEventListener('click', async () => {
       hideAlert();
-
       if (!selectedFile1 || !selectedFile2) {
         showAlert('error', 'Необходимо выбрать оба файла!');
         return;
@@ -193,7 +256,6 @@
         })
         .then((data) => {
           setProgress(100);
-
           progressContainer.style.display = 'none';
 
           if (data.status === 'success') {

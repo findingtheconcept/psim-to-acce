@@ -74,7 +74,7 @@ if __name__ == "__main__":
         'PSIM to ASSE',
         'http://127.0.0.1:5000',
         width=800,
-        height=680,
+        height=500,
         resizable=False,
         js_api=bridge
     )
