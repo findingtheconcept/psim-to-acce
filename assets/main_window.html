@@ -2,92 +2,297 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Конвертер PSIM (Excel) в ASSE</title>
-  <link
-    rel="stylesheet"
-    href="{{ url_for('static', filename='css/bootstrap.min.css') }}"
-  />
+
+  <!-- Force the HTML/Body to fill entire 800x680 window -->
   <style>
-    body {
-      background-color: #f8f9fa; /* Light gray background from Bootstrap */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden; /* No scrolling, we assume fixed size */
+      background-color: #eaeaea; /* Light desktop-like background */
+      font-family: "Segoe UI", Tahoma, sans-serif;
     }
-    .main-container {
+
+    /* A full-window "app" container */
+    .window {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #bcbcbc;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.25);
       background-color: #ffffff;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-      padding: 30px;
+    }
+
+    /* Title bar across the top */
+    .title-bar {
+      background: #0078d7; /* Windows-like blue */
+      color: #ffffff;
+      padding: 0.5rem 1rem;
+      font-weight: 600;
+      border-bottom: 1px solid #006abb;
+    }
+
+    /* The main content area below the title bar */
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+      position: relative; /* So we can absolutely-position the alert */
+    }
+
+    /* The row that contains file selection cards */
+    .file-selection-row {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .file-card {
+      flex: 1;
+      border: 1px solid #dcdcdc;
+      border-radius: 4px;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+    }
+    .file-card-header {
+      background: #f5f5f5;
+      padding: 0.75rem;
+      text-align: center;
+      border-bottom: 1px solid #dcdcdc;
+      font-weight: 500;
+    }
+    .file-card-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    /* Convert button row */
+    .button-row {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    /* Progress bar container, hidden by default */
+    #progressContainer {
+      display: none;
+      margin-top: 0.5rem;
+    }
+
+    /* Absolutely-positioned alert, so it doesn't push content */
+    #alertBox {
+      display: none;
+      z-index: 999;
+    }
+
+    /* Basic bootstrap override, if needed */
+    .progress {
+      margin-top: 0.5rem;
     }
   </style>
+
+  <!-- Bootstrap CSS from your static folder -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" />
 </head>
 <body>
-  <div class="container my-5">
-    <div class="main-container">
-      <h1 class="text-center mb-4">Конвертер PSIM (Excel) в ASSE</h1>
+  <div class="window">
+    <!-- Title bar -->
+    <div class="title-bar">Конвертер PSIM (Excel) в ASSE</div>
 
-      <div class="row">
-        <!-- Left column -->
-        <div class="col-md-6 mb-4">
-          <div class="card h-100">
-            <div class="card-header text-center">
-              <h5 class="card-title mb-0">Загрузить файл PSIM</h5>
-            </div>
-            <div class="card-body d-flex flex-column justify-content-center align-items-center">
-              <button id="btnSelectPsimFile" class="btn btn-outline-primary mb-3">
-                Выбрать файл
-              </button>
-              <input type="file" id="psimFileInput" accept=".xlsx" style="display: none;">
-              <p class="text-muted small mb-0">
-                Или перетащите XLSX сюда
-              </p>
-            </div>
+    <!-- Main content area -->
+    <div class="content">
+      <!-- The row with two file cards -->
+      <div class="file-selection-row">
+        <!-- File #1 -->
+        <div class="file-card">
+          <div class="file-card-header">Входной файл #1 (PSIM)</div>
+          <div class="file-card-body">
+            <button id="btnSelectFile1" class="btn btn-outline-primary mb-3">Выбрать файл</button>
+            <p id="filePath1" class="mt-2 text-muted" style="display: none;"></p>
           </div>
         </div>
 
-        <!-- Right column -->
-        <div class="col-md-6 mb-4">
-          <div class="card h-100">
-            <div class="card-header text-center">
-              <h5 class="card-title mb-0">Выбрать папку для сохранения</h5>
-            </div>
-            <div class="card-body d-flex flex-column justify-content-center align-items-center">
-              <button id="btnSelectSaveFolder" class="btn btn-outline-primary">
-                Выбрать папку
-              </button>
-              <p class="text-muted small mt-3 mb-0">
-                Здесь будет сохранен файл ASSE
-              </p>
-            </div>
+        <!-- File #2 -->
+        <div class="file-card">
+          <div class="file-card-header">Входной файл #2</div>
+          <div class="file-card-body">
+            <button id="btnSelectFile2" class="btn btn-outline-primary mb-3">Выбрать файл</button>
+            <p id="filePath2" class="mt-2 text-muted" style="display: none;"></p>
           </div>
         </div>
       </div>
 
-      <div class="d-flex justify-content-center">
-        <button id="btnConvert" class="btn btn-success btn-lg">
-          Конвертировать
-        </button>
+      <!-- Convert button row -->
+      <div class="button-row">
+        <button id="btnConvert" class="btn btn-success btn-lg">Конвертировать</button>
       </div>
+
+      <!-- Progress bar -->
+      <div id="progressContainer">
+        <div class="progress">
+          <div
+            id="progressBar"
+            class="progress-bar progress-bar-striped progress-bar-animated"
+            role="progressbar"
+            style="width: 0%"
+            aria-valuenow="0"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          ></div>
+        </div>
+      </div>
+
+      <!-- Alert (position: absolute) -->
+      <div id="alertBox" class="alert" role="alert"></div>
     </div>
   </div>
 
   <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
   <script>
-    const btnSelectPsimFile = document.getElementById('btnSelectPsimFile');
-    const psimFileInput = document.getElementById('psimFileInput');
-
-    btnSelectPsimFile.addEventListener('click', () => {
-      psimFileInput.click();
-    });
-
-    const btnSelectSaveFolder = document.getElementById('btnSelectSaveFolder');
-    btnSelectSaveFolder.addEventListener('click', () => {
-      alert('Save folder selection logic goes here');
-    });
+    const btnSelectFile1 = document.getElementById('btnSelectFile1');
+    const btnSelectFile2 = document.getElementById('btnSelectFile2');
+    const filePath1 = document.getElementById('filePath1');
+    const filePath2 = document.getElementById('filePath2');
 
     const btnConvert = document.getElementById('btnConvert');
-    btnConvert.addEventListener('click', () => {
-      alert('Conversion logic goes here');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const alertBox = document.getElementById('alertBox');
+
+    let selectedFile1 = "";
+    let selectedFile2 = "";
+
+    // SELECT FILE #1
+    btnSelectFile1.addEventListener('click', async () => {
+      hideAlert();
+      filePath1.textContent = "";
+      filePath1.style.display = 'none';
+      try {
+        const path = await pywebview.api.select_source_file();
+        if (path) {
+          selectedFile1 = path;
+          filePath1.textContent = path;
+          filePath1.style.display = 'block';
+        } else {
+          selectedFile1 = "";
+          console.log("File1 selection canceled");
+        }
+      } catch (err) {
+        console.error("Error selecting file1:", err);
+        showAlert('error', 'Ошибка при выборе файла #1');
+      }
     });
+
+    // SELECT FILE #2
+    btnSelectFile2.addEventListener('click', async () => {
+      hideAlert();
+      filePath2.textContent = "";
+      filePath2.style.display = 'none';
+      try {
+        const path = await pywebview.api.select_source_file();
+        if (path) {
+          selectedFile2 = path;
+          filePath2.textContent = path;
+          filePath2.style.display = 'block';
+        } else {
+          selectedFile2 = "";
+          console.log("File2 selection canceled");
+        }
+      } catch (err) {
+        console.error("Error selecting file2:", err);
+        showAlert('error', 'Ошибка при выборе файла #2');
+      }
+    });
+
+    // CONVERT
+    btnConvert.addEventListener('click', async () => {
+      hideAlert();
+      if (!selectedFile1 || !selectedFile2) {
+        showAlert('error', 'Необходимо выбрать оба файла!');
+        return;
+      }
+
+      let outputPath = "";
+      try {
+        outputPath = await pywebview.api.select_save_file();
+      } catch (e) {
+        console.error("Error calling select_save_file:", e);
+        showAlert('error', 'Ошибка при выборе пути сохранения.');
+        return;
+      }
+
+      if (!outputPath) {
+        showAlert('error', 'Путь для сохранения не выбран.');
+        return;
+      }
+
+      progressContainer.style.display = 'block';
+      setProgress(10);
+
+      const payload = {
+        inputFile: selectedFile1,
+        secondFile: selectedFile2,
+        outputFile: outputPath
+      };
+
+      setProgress(50);
+
+      fetch('/convert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error(`Server error: ${res.statusText}`);
+          return res.json();
+        })
+        .then((data) => {
+          setProgress(100);
+          progressContainer.style.display = 'none';
+
+          if (data.status === 'success') {
+            showAlert('success', data.message || 'Успешно завершено!');
+          } else {
+            showAlert('error', data.message || 'Произошла ошибка при конвертации');
+          }
+        })
+        .catch((err) => {
+          progressContainer.style.display = 'none';
+          console.error('Error:', err);
+          showAlert('error', 'Произошла ошибка. Обратитесь к разработчику.');
+        });
+    });
+
+    function setProgress(percent) {
+      progressBar.style.width = percent + '%';
+      progressBar.setAttribute('aria-valuenow', percent);
+    }
+
+    function showAlert(type, message) {
+      alertBox.style.display = 'block';
+      alertBox.textContent = message;
+      alertBox.className = 'alert';
+
+      if (type === 'success') {
+        alertBox.classList.add('alert-success');
+      } else {
+        alertBox.classList.add('alert-danger');
+      }
+    }
+
+    function hideAlert() {
+      alertBox.style.display = 'none';
+      alertBox.textContent = '';
+      alertBox.className = 'alert';
+    }
   </script>
 </body>
 </html>
