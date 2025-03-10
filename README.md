@@ -1,5 +1,5 @@
 
-# PSIM to ASSE Converter
+# PSIM to AССE Converter
 
 This project provides a desktop application that converts data from **PSIM** (Excel format) to **ASSE**. The application uses **Flask** as the backend server and **PyWebView** for creating the desktop user interface.
 
