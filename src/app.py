@@ -1,6 +1,6 @@
-import sys
-import os
 import logging
+import os
+import sys
 from threading import Thread
 
 import webview
@@ -30,12 +30,11 @@ class Bridge:
     def select_source_file(self):
         if not self.window:
             return ""
-
         result = self.window.create_file_dialog(
-            dialog_type=webview.OPEN_DIALOG,
+            webview.OPEN_DIALOG,
             directory='',
             allow_multiple=False,
-            save_filename='',
+            save_filename=''
         )
         if result and len(result) > 0:
             return result[0]
@@ -50,7 +49,6 @@ class Bridge:
             False,
             'export_spreadsheet.xlsx'
         )
-        print("User chose path:", result)
         if result and len(result) > 0:
             return result
         return ""
@@ -71,14 +69,13 @@ if __name__ == "__main__":
     bridge = Bridge()
 
     window = webview.create_window(
-        'PSIM to ASSE',
+        'PSIM to ACCE',
         'http://127.0.0.1:5000',
         width=800,
         height=500,
-        resizable=False,
-        js_api=bridge
+        resizable=True,
+        js_api=bridge,
     )
 
     bridge.window = window
-
-    webview.start()
+    webview.start(storage_path=os.path.join(base_path, "webview_data"))
