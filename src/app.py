@@ -24,13 +24,8 @@ app.register_blueprint(main_bp)
 
 
 class Bridge:
-    def __init__(self):
-        self.window = None
-
     def select_source_file(self):
-        if not self.window:
-            return ""
-        result = self.window.create_file_dialog(
+        result = window.create_file_dialog(
             webview.OPEN_DIALOG,
             directory='',
             allow_multiple=False,
@@ -41,9 +36,7 @@ class Bridge:
         return ""
 
     def select_save_file(self):
-        if not self.window:
-            return ""
-        result = self.window.create_file_dialog(
+        result = window.create_file_dialog(
             webview.SAVE_DIALOG,
             '.',
             False,
@@ -77,5 +70,4 @@ if __name__ == "__main__":
         js_api=bridge,
     )
 
-    bridge.window = window
     webview.start(storage_path=os.path.join(base_path, "webview_data"))
