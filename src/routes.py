@@ -1,6 +1,8 @@
 import logging
 import os
 import shutil
+import json
+from datetime import datetime
 from flask import Blueprint, request, jsonify, render_template
 from converter import convert_psim_to_asse
 from utils import get_app_folder
@@ -33,42 +35,98 @@ def store_history():
     orig_file1 = data.get('file1')
     orig_file2 = data.get('file2')
     folder = get_app_folder()
+    
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     base1 = os.path.basename(orig_file1)
     base2 = os.path.basename(orig_file2)
-    new_file1 = os.path.join(folder, f"file1_{int(os.path.getmtime(orig_file1))}_{base1}")
-    new_file2 = os.path.join(folder, f"file2_{int(os.path.getmtime(orig_file2))}_{base2}")
+    
+    new_file1 = os.path.join(folder, f"file1_{timestamp}_{base1}")
+    new_file2 = os.path.join(folder, f"file2_{timestamp}_{base2}")
+    
     try:
         shutil.copy2(orig_file1, new_file1)
         shutil.copy2(orig_file2, new_file2)
-        return jsonify({"status": "ok", "file1": new_file1, "file2": new_file2})
-    except Exception as e:
-        logging.error(f"Error copying files: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
 
-@bp.route('/delete_history_item', methods=['POST'])
-def delete_history_item():
-    data = request.json
-    path1 = data.get('file1')
-    path2 = data.get('file2')
-    try:
-        if path1 and os.path.exists(path1) and path1.startswith(get_app_folder()):
-            os.remove(path1)
-        if path2 and os.path.exists(path2) and path2.startswith(get_app_folder()):
-            os.remove(path2)
-        return jsonify({"status": "ok"})
+        history_entry = {
+            "time": datetime.now().isoformat(),
+            "file1": new_file1,
+            "file2": new_file2,
+            "uuid": timestamp 
+        }
+        
+        history_path = os.path.join(folder, 'history.json')
+        history = []
+        if os.path.exists(history_path):
+            with open(history_path, 'r', encoding='utf-8') as f:
+                history = json.load(f)
+        
+        history.insert(0, history_entry)
+        
+        with open(history_path, 'w', encoding='utf-8') as f:
+            json.dump(history, f, indent=2)
+
+        return jsonify({"status": "ok", "file1": new_file1, "file2": new_file2})
+    
     except Exception as e:
-        logging.error(f"Error removing files: {e}")
+        logging.error(f"Error storing history: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @bp.route('/clear_all_history', methods=['POST'])
 def clear_all_history():
-    folder = get_app_folder()
     try:
+        folder = get_app_folder()
         for f in os.listdir(folder):
             path = os.path.join(folder, f)
             if os.path.isfile(path):
                 os.remove(path)
+        
+        history_path = os.path.join(folder, 'history.json')
+        if os.path.exists(history_path):
+            os.remove(history_path)
+        
         return jsonify({"status": "ok"})
+    
     except Exception as e:
-        logging.error(f"Error clearing folder: {e}")
+        logging.error(f"Error clearing history: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@bp.route('/get_history', methods=['GET'])
+def get_history():
+    history_path = os.path.join(get_app_folder(), 'history.json')
+    try:
+        if os.path.exists(history_path):
+            with open(history_path, 'r', encoding='utf-8') as f:
+                return jsonify(json.load(f))
+        return jsonify([])
+    except Exception as e:
+        logging.error(f"Error reading history: {e}")
+        return jsonify([])
+    
+@bp.route('/delete_history_item', methods=['POST'])
+def delete_history_item():
+    data = request.json
+    file1 = data.get('file1')
+    file2 = data.get('file2')
+    
+    try:
+        if os.path.exists(file1):
+            os.remove(file1)
+        if os.path.exists(file2):
+            os.remove(file2)
+        
+        history_path = os.path.join(get_app_folder(), 'history.json')
+        if os.path.exists(history_path):
+            with open(history_path, 'r', encoding='utf-8') as f:
+                history = json.load(f)
+            
+            new_history = [entry for entry in history 
+                         if not (entry['file1'] == file1 and entry['file2'] == file2)]
+            
+            with open(history_path, 'w', encoding='utf-8') as f:
+                json.dump(new_history, f, indent=2)
+        
+        return jsonify({"status": "ok"})
+    
+    except Exception as e:
+        logging.error(f"Error deleting history item: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500

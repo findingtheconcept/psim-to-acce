@@ -223,6 +223,8 @@
     document.addEventListener('DOMContentLoaded', () => {
     });
 
+    
+
     btnHistory.addEventListener('click', () => {
         historySearch.value = '';
         renderHistory();
@@ -247,6 +249,8 @@
     historySearch.addEventListener('input', () => {
         renderHistory(historySearch.value);
     });
+
+    
 
     btnSelectFile1.addEventListener('click', async () => {
         hideAlert();
@@ -347,117 +351,138 @@
             });
     });
 
-    function storeFiles(file1, file2) {
-        fetch('/store_history', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({file1, file2})
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'ok') {
-                    // В истории храним уже новые безопасные пути
-                    addToHistory(data.file1, data.file2);
-                } else {
-                    showAlert('error', 'Не удалось сохранить файлы в историю: ' + data.message);
-                }
-            })
-            .catch(err => showAlert('error', 'Ошибка при сохранении в историю: ' + err));
+
+    function formatDate(date) {
+        return `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
     }
 
-    function addToHistory(file1, file2) {
-        const history = JSON.parse(localStorage.getItem('conversionHistory')) || [];
-        history.unshift({
-            time: new Date().toISOString(),
-            file1,
-            file2
-        });
-        localStorage.setItem('conversionHistory', JSON.stringify(history));
+    function storeFiles(file1, file2) {
+    fetch('/store_history', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({file1, file2})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            showAlert('success', 'Конвертация сохранена в историю');
+        } else {
+            showAlert('error', 'Ошибка сохранения истории: ' + data.message);
+        }
+    })
+    .catch(err => showAlert('error', 'Ошибка при сохранении истории: ' + err));
     }
+
 
     function renderHistory(filterText = '') {
-        historyList.innerHTML = '';
+    fetch('/get_history')
+        .then(res => res.json())
+        .then(history => {
+            historyList.innerHTML = '';
+            
+            if (!history.length) {
+                historyList.innerHTML = '<li class="list-group-item text-muted">История пуста</li>';
+                return;
+            }
 
-        const history = JSON.parse(localStorage.getItem('conversionHistory')) || [];
-        if (!history.length) {
-            historyList.innerHTML = '<li class="list-group-item text-muted">История пуста</li>';
-            return;
-        }
-
-        const filteredHistory = history.filter(entry => {
-            const dateObj = new Date(entry.time);
-            const dateString = `${String(dateObj.getDate()).padStart(2, '0')}.${String(dateObj.getMonth() + 1).padStart(2, '0')}.${dateObj.getFullYear()} ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}:${String(dateObj.getSeconds()).padStart(2, '0')}`;
-
-            return dateString.includes(filterText) || entry.file1.includes(filterText) || entry.file2.includes(filterText);
-        });
-
-        if (filteredHistory.length === 0) {
-            historyList.innerHTML = '<li class="list-group-item text-muted">Нет совпадений</li>';
-            return;
-        }
-
-        filteredHistory.forEach(entry => {
-            const li = document.createElement('li');
-            li.className = 'list-group-item history-item';
-
-            const dateObj = new Date(entry.time);
-            const dateString = `${String(dateObj.getDate()).padStart(2, '0')}.${String(dateObj.getMonth() + 1).padStart(2, '0')}.${dateObj.getFullYear()} ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}:${String(dateObj.getSeconds()).padStart(2, '0')}`;
-
-            const dateHtml = highlightText(dateString, filterText);
-            const file1Html = highlightText(entry.file1, filterText);
-            const file2Html = highlightText(entry.file2, filterText);
-
-            li.innerHTML = `
-          <div class="d-flex justify-content-between align-items-center">
-            <small class="text-muted">${dateHtml}</small>
-            <button class="btn btn-danger btn-sm">Удалить</button>
-          </div>
-          <div>
-            <strong>File1:</strong> <pre class="text-break">${file1Html}</pre>
-            <strong>File2:</strong> <pre class="text-break">${file2Html}</pre>
-            <span class="text-secondary" style="font-size: 0.8rem;">(Нажмите, чтобы восстановить)</span>
-          </div>
-        `;
-
-            li.addEventListener('click', (evt) => {
-                if (evt.target.tagName.toLowerCase() === 'button') return; // Игнорируем кнопку удаления
-                selectedFile1 = entry.file1;
-                selectedFile2 = entry.file2;
-                filePath1.textContent = entry.file1;
-                filePath2.textContent = entry.file2;
-                filePath1.style.display = 'block';
-                filePath2.style.display = 'block';
-                historyModal.hide();
+            const filteredHistory = history.filter(entry => {
+                const dateObj = new Date(entry.time);
+                const dateString = `${String(dateObj.getDate()).padStart(2, '0')}.${String(dateObj.getMonth() + 1).padStart(2, '0')}.${dateObj.getFullYear()} ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}:${String(dateObj.getSeconds()).padStart(2, '0')}`;
+                return dateString.includes(filterText) || 
+                       entry.file1.includes(filterText) || 
+                       entry.file2.includes(filterText);
             });
 
-            li.querySelector('button').addEventListener('click', () => {
-                if (!confirm('Удалить эту запись из истории?')) return;
-                fetch('/delete_history_item', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({file1: entry.file1, file2: entry.file2})
-                })
+            if (filteredHistory.length === 0) {
+                historyList.innerHTML = '<li class="list-group-item text-muted">Нет совпадений</li>';
+                return;
+            }
+
+            filteredHistory.forEach(entry => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item history-item';
+                
+                const dateObj = new Date(entry.time);
+                const dateString = `${String(dateObj.getDate()).padStart(2, '0')}.${String(dateObj.getMonth() + 1).padStart(2, '0')}.${dateObj.getFullYear()} ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}:${String(dateObj.getSeconds()).padStart(2, '0')}`;
+
+                li.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">${highlightText(dateString, filterText)}</small>
+                        <button class="btn btn-danger btn-sm">Удалить</button>
+                    </div>
+                    <div>
+                        <strong>File1:</strong> <pre class="text-break">${highlightText(entry.file1, filterText)}</pre>
+                        <strong>File2:</strong> <pre class="text-break">${highlightText(entry.file2, filterText)}</pre>
+                        <span class="text-secondary" style="font-size: 0.8rem;">(Нажмите, чтобы восстановить)</span>
+                    </div>
+                `;
+
+                li.addEventListener('click', (evt) => {
+                    if (evt.target.tagName.toLowerCase() === 'button') return;
+                    selectedFile1 = entry.file1;
+                    selectedFile2 = entry.file2;
+                    filePath1.textContent = entry.file1;
+                    filePath2.textContent = entry.file2;
+                    filePath1.style.display = 'block';
+                    filePath2.style.display = 'block';
+                    historyModal.hide();
+                });
+
+                li.querySelector('button').addEventListener('click', () => {
+                    if (!confirm('Удалить эту запись из истории?')) return;
+                    fetch('/delete_history_item', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({file1: entry.file1, file2: entry.file2})
+                    })
                     .then(r => r.json())
                     .then(d => {
                         if (d.status === 'ok') {
-                            removeFromHistory(entry.file1, entry.file2);
                             renderHistory(filterText);
                         } else {
                             alert('Ошибка удаления: ' + d.message);
                         }
                     })
-                    .catch(err => alert('Сетевая ошибка при удалении: ' + err));
-            });
+                    .catch(err => alert('Ошибка сети: ' + err));
+                });
 
-            historyList.appendChild(li);
+                historyList.appendChild(li);
+            });
+        })
+        .catch(err => {
+            console.error('Ошибка загрузки истории:', err);
+            showAlert('error', 'Не удалось загрузить историю');
         });
     }
 
-    function removeFromHistory(f1, f2) {
-        let history = JSON.parse(localStorage.getItem('conversionHistory')) || [];
-        history = history.filter(item => item.file1 !== f1 || item.file2 !== f2);
-        localStorage.setItem('conversionHistory', JSON.stringify(history));
+
+    function loadHistoryFromServer() {
+    fetch('/get_history')
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                const history = data.history.map(entry => ({
+                    time: new Date(entry.time * 1000).toISOString(),
+                    file1: entry.file1,
+                    file2: entry.file2
+                }));
+                localStorage.setItem('conversionHistory', JSON.stringify(history));
+                renderHistory();
+            } else {
+                //showAlert('error', 'Ошибка загрузки истории: ' + data.message);
+            }
+        })
+        .catch(err => showAlert('error', 'Ошибка сети при загрузке истории: ' + err));
     }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        renderHistory();
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadHistoryFromServer();
+    });
+    
 
     function highlightText(original, search) {
         if (!search) return original;

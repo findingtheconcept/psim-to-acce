@@ -40,6 +40,7 @@ def build_exe():
         '--clean',
         '--onefile',
         '--windowed',
+        '--noconfirm',
         '--add-data', f'{assets_dir};assets',
         '--add-data', f'{static_dir};static',
         app_script
