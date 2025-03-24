@@ -2,7 +2,11 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8"/>
-  <title>Конвертер PSIM (Excel) в ACCE</title>
+  <title>Приложение: Конвертер + Работа с IFC</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/sweetalert2.min.css') }}"/>
   <style>
       html, body {
           margin: 0;
@@ -14,19 +18,96 @@
           font-family: "Segoe UI", Tahoma, sans-serif;
       }
 
-      .window {
+      .dark-mode {
+          background-color: #121212 !important;
+          color: #e5e5e5 !important;
+      }
+
+      .dark-mode .content {
+          background-color: #121212 !important;
+          color: #e5e5e5 !important;
+      }
+
+      .dark-mode .title-bar {
+          background: #222 !important;
+          border-bottom: 1px solid #555 !important;
+      }
+
+      .dark-mode .file-card {
+          background: #202020 !important;
+          border: 1px solid #555 !important;
+      }
+
+      .dark-mode .file-card-header {
+          background: #2c2c2c !important;
+          border-bottom: 1px solid #555 !important;
+      }
+
+      .dark-mode pre {
+          color: #ccc !important;
+      }
+
+      .dark-mode .toast {
+          background-color: #2c2c2c !important;
+          color: #f0f0f0 !important;
+      }
+
+      .dark-mode .toast-header {
+          background-color: #333 !important;
+          color: #f0f0f0 !important;
+      }
+
+      .dark-mode .btn-close {
+          filter: invert(100%);
+      }
+
+      .dark-mode .text-bg-success {
+          background-color: #446844 !important;
+          color: #fff !important;
+      }
+
+      .dark-mode .text-bg-danger {
+          background-color: #773333 !important;
+          color: #fff !important;
+      }
+
+      .dark-mode .modal-content {
+          background-color: #202020 !important;
+          color: #e5e5e5 !important;
+      }
+
+      .dark-mode .modal-header,
+      .dark-mode .modal-body {
+          background-color: #2c2c2c !important;
+          border-bottom: 1px solid #555 !important;
+      }
+
+      .dark-mode .list-group-item.history-item {
+          background-color: #2c2c2c !important;
+          color: #e5e5e5 !important;
+          border: 1px solid #555 !important;
+      }
+
+      .dark-mode .input-group-text {
+          background-color: #333 !important;
+          color: #f0f0f0 !important;
+      }
+
+      .dark-mode .btn.btn-danger.btn-sm.ms-2 {
+          background-color: #773333 !important;
+          border: none !important;
+      }
+
+      .app-container {
           width: 100%;
           height: 100%;
           display: flex;
           flex-direction: column;
-          border: 1px solid #bcbcbc;
-          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-          background-color: #ffffff;
       }
 
       .title-bar {
           background: #0078d7;
-          color: #ffffff;
+          color: #fff;
           padding: 0.5rem 1rem;
           font-weight: 600;
           border-bottom: 1px solid #006abb;
@@ -41,6 +122,17 @@
           flex-direction: column;
           padding: 1rem;
           position: relative;
+          background: #fff;
+      }
+
+      .app-screen {
+          display: none;
+          flex: 1;
+          flex-direction: column;
+      }
+
+      .app-screen.active {
+          display: flex;
       }
 
       .file-selection-row {
@@ -57,6 +149,7 @@
           display: flex;
           flex-direction: column;
           transition: box-shadow 0.2s;
+          position: relative;
       }
 
       .file-card:hover {
@@ -80,6 +173,11 @@
           padding: 1rem;
       }
 
+      .file-card.dragover {
+          border: 2px dashed #0d6efd;
+          background: #f0f8ff;
+      }
+
       .button-row {
           text-align: center;
           margin-bottom: 1rem;
@@ -99,11 +197,6 @@
           font-weight: 500;
       }
 
-      #alertBox {
-          display: none;
-          z-index: 999;
-      }
-
       .highlight {
           background-color: yellow;
           font-weight: bold;
@@ -118,61 +211,139 @@
           word-break: break-word;
           margin-bottom: 0;
       }
-  </style>
 
-  <!-- Bootstrap 5 CSS -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+      .shake {
+          animation: shake 0.4s;
+      }
+
+      @keyframes shake {
+          0% {
+              transform: translate(0, 0);
+          }
+          25% {
+              transform: translate(-5px, 0);
+          }
+          50% {
+              transform: translate(5px, 0);
+          }
+          75% {
+              transform: translate(-5px, 0);
+          }
+          100% {
+              transform: translate(0, 0);
+          }
+      }
+
+      .toast-container {
+          position: fixed;
+          bottom: 1rem;
+          right: 1rem;
+          z-index: 9999;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+      }
+
+      .toast {
+          max-width: 300px;
+      }
+  </style>
 </head>
 <body>
-<div class="window">
+<div class="app-container" id="appRoot">
   <div class="title-bar">
-    <span>Конвертер PSIM (Excel) в ACCE</span>
-    <button id="btnHistory" class="btn btn-light btn-sm">История</button>
+    <span id="titleText">Конвертер PSIM (Excel) в ACCE</span>
+    <div>
+      <button id="btnDarkMode" class="btn btn-secondary btn-sm me-2"><i class="bi bi-moon"></i></button>
+      <button id="btnToggleIFC" class="btn btn-warning btn-sm me-2">Перейти к IFC</button>
+      <button id="btnHistory" class="btn btn-light btn-sm">История</button>
+    </div>
   </div>
-
-  <div class="content">
+  <div id="screenPSIM" class="content app-screen active">
     <div class="file-selection-row">
-      <div class="file-card">
+      <div class="file-card" id="psimCard1">
         <div class="file-card-header">Входной файл #1 (PSIM)</div>
         <div class="file-card-body">
-          <button id="btnSelectFile1" class="btn btn-outline-primary mb-3">Выбрать файл</button>
+          <button id="btnSelectFile1" class="btn btn-outline-primary mb-3"><i class="bi bi-folder2-open"></i> Выбрать
+            файл
+          </button>
+          <p class="text-muted small mb-2">Или перетащите файл сюда</p>
           <pre id="filePath1" class="mt-2 text-muted" style="display: none;"></pre>
         </div>
       </div>
-
-      <div class="file-card">
+      <div class="file-card" id="psimCard2">
         <div class="file-card-header">Входной файл #2</div>
         <div class="file-card-body">
-          <button id="btnSelectFile2" class="btn btn-outline-primary mb-3">Выбрать файл</button>
+          <button id="btnSelectFile2" class="btn btn-outline-primary mb-3"><i class="bi bi-folder2-open"></i> Выбрать
+            файл
+          </button>
+          <p class="text-muted small mb-2">Или перетащите файл сюда</p>
           <pre id="filePath2" class="mt-2 text-muted" style="display: none;"></pre>
         </div>
       </div>
     </div>
-
     <div class="button-row">
-      <button id="btnConvert" class="btn btn-success btn-lg shadow-sm">
+      <button id="btnConvert" class="btn btn-success btn-lg shadow-sm"><i class="bi bi-arrow-right-square"></i>
         Конвертировать
       </button>
     </div>
-
     <div id="progressContainer">
       <div class="progress">
-        <div
-          id="progressBar"
-          class="progress-bar progress-bar-striped progress-bar-animated"
-          role="progressbar"
-          style="width: 0%"
-          aria-valuenow="0"
-          aria-valuemin="0"
-          aria-valuemax="100"
-        ></div>
+        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+             style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
       </div>
     </div>
-
-    <div id="alertBox" class="alert" role="alert"></div>
+    <div class="toast-container">
+      <div id="toastPSIM" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+          <strong class="me-auto" id="toastPSIMTitle"></strong>
+          <small id="toastPSIMTime"></small>
+          <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toastPSIMBody"></div>
+      </div>
+    </div>
+  </div>
+  <div id="screenIFC" class="content app-screen">
+    <h4 class="mb-4">Работа с 3D-моделями (IFC)</h4>
+    <div class="file-selection-row">
+      <div class="file-card" id="ifcCard1">
+        <div class="file-card-header">Выбор 3D модели</div>
+        <div class="file-card-body">
+          <button id="btnSelectIFC" class="btn btn-outline-primary mb-3"><i class="bi bi-folder2-open"></i> Выбрать IFC
+          </button>
+          <p class="text-muted small mb-2">Или перетащите модель сюда</p>
+          <pre id="ifcPath" class="mt-2 text-muted" style="display: none;"></pre>
+        </div>
+      </div>
+      <div class="file-card" id="ifcCard2">
+        <div class="file-card-header">Атрибуты</div>
+        <div class="file-card-body">
+          <button id="btnSelectAttrib" class="btn btn-outline-primary mb-3"><i class="bi bi-folder2-open"></i> Выбрать
+            файл
+          </button>
+          <p class="text-muted small mb-2">Или перетащите атрибуты сюда</p>
+          <pre id="attribPath" class="mt-2 text-muted" style="display: none;"></pre>
+        </div>
+      </div>
+    </div>
+    <div class="button-row">
+      <button id="btnConvertIFC" class="btn btn-success btn-lg shadow-sm"><i class="bi bi-arrow-right-square"></i>
+        Конвертировать
+      </button>
+    </div>
+    <div class="toast-container">
+      <div id="toastIFC" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+          <strong class="me-auto" id="toastIFCTitle"></strong>
+          <small id="toastIFCTime"></small>
+          <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toastIFCBody"></div>
+      </div>
+    </div>
   </div>
 </div>
-
 <div class="modal fade" id="historyModal" tabindex="-1" aria-labelledby="historyModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-scrollable" style="max-width: 600px;">
     <div class="modal-content">
@@ -186,306 +357,15 @@
           <input id="historySearch" type="text" class="form-control" placeholder="Введите дату/время"/>
           <button id="btnClearAll" class="btn btn-danger btn-sm ms-2">Очистить всё</button>
         </div>
-
         <ul id="historyList" class="list-group"></ul>
-
-        <p class="text-muted mt-2" style="font-size: 0.875rem;">
-          Нажмите на элемент истории, чтобы восстановить выбранные файлы.
-        </p>
+        <p class="text-muted mt-2" style="font-size: 0.875rem;">Нажмите на элемент истории, чтобы восстановить выбранные
+          файлы.</p>
       </div>
     </div>
   </div>
 </div>
-
-<!-- Bootstrap Bundle JS -->
+<script src="{{ url_for('static', filename='js/sweetalert2.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
-<script>
-    const btnSelectFile1 = document.getElementById('btnSelectFile1');
-    const btnSelectFile2 = document.getElementById('btnSelectFile2');
-    const filePath1 = document.getElementById('filePath1');
-    const filePath2 = document.getElementById('filePath2');
-
-    const btnConvert = document.getElementById('btnConvert');
-    const progressContainer = document.getElementById('progressContainer');
-    const progressBar = document.getElementById('progressBar');
-    const alertBox = document.getElementById('alertBox');
-
-    const btnHistory = document.getElementById('btnHistory');
-    const historyModalEl = document.getElementById('historyModal');
-    const historyModal = new bootstrap.Modal(historyModalEl, {});
-    const historyList = document.getElementById('historyList');
-    const historySearch = document.getElementById('historySearch');
-    const btnClearAll = document.getElementById('btnClearAll');
-
-    let selectedFile1 = "";
-    let selectedFile2 = "";
-
-    document.addEventListener('DOMContentLoaded', () => {
-    });
-
-    btnHistory.addEventListener('click', () => {
-        historySearch.value = '';
-        renderHistory();
-        historyModal.show();
-    });
-
-    btnClearAll.addEventListener('click', () => {
-        if (!confirm("Точно очистить всю историю?")) return;
-        fetch('/clear_all_history', {method: 'POST'})
-            .then(res => res.json())
-            .then(d => {
-                if (d.status === 'ok') {
-                    localStorage.setItem('conversionHistory', JSON.stringify([]));
-                    renderHistory();
-                } else {
-                    alert("Ошибка очистки: " + d.message);
-                }
-            })
-            .catch(err => alert("Ошибка сети при очистке: " + err));
-    });
-
-    historySearch.addEventListener('input', () => {
-        renderHistory(historySearch.value);
-    });
-
-    btnSelectFile1.addEventListener('click', async () => {
-        hideAlert();
-        filePath1.textContent = "";
-        filePath1.style.display = 'none';
-
-        try {
-            const path = await pywebview.api.select_source_file();
-            if (path) {
-                selectedFile1 = path;
-                filePath1.textContent = path;
-                filePath1.style.display = 'block';
-            } else {
-                selectedFile1 = "";
-            }
-        } catch (err) {
-            console.error("Error selecting file1:", err);
-            showAlert('error', 'Ошибка при выборе файла #1');
-        }
-    });
-
-    btnSelectFile2.addEventListener('click', async () => {
-        hideAlert();
-        filePath2.textContent = "";
-        filePath2.style.display = 'none';
-
-        try {
-            const path = await pywebview.api.select_source_file();
-            if (path) {
-                selectedFile2 = path;
-                filePath2.textContent = path;
-                filePath2.style.display = 'block';
-            } else {
-                selectedFile2 = "";
-            }
-        } catch (err) {
-            console.error("Error selecting file2:", err);
-            showAlert('error', 'Ошибка при выборе файла #2');
-        }
-    });
-
-    btnConvert.addEventListener('click', async () => {
-        hideAlert();
-        if (!selectedFile1 || !selectedFile2) {
-            showAlert('error', 'Необходимо выбрать оба файла!');
-            return;
-        }
-
-        let outputPath = "";
-        try {
-            outputPath = await pywebview.api.select_save_file();
-        } catch (e) {
-            console.error("Error selecting save file:", e);
-            showAlert('error', 'Ошибка при выборе пути сохранения.');
-            return;
-        }
-
-        if (!outputPath) {
-            showAlert('error', 'Путь для сохранения не выбран.');
-            return;
-        }
-
-        progressContainer.style.display = 'block';
-        setProgress(10);
-
-        const payload = {
-            inputFile: selectedFile1,
-            secondFile: selectedFile2,
-            outputFile: outputPath
-        };
-
-        setProgress(50);
-
-        fetch('/convert', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        })
-            .then((res) => {
-                if (!res.ok) throw new Error(`Server error: ${res.statusText}`);
-                return res.json();
-            })
-            .then((data) => {
-                setProgress(100);
-                progressContainer.style.display = 'none';
-
-                if (data.status === 'success') {
-                    showAlert('success', data.message || 'Успешно завершено!');
-                    storeFiles(selectedFile1, selectedFile2);
-                } else {
-                    showAlert('error', data.message || 'Произошла ошибка при конвертации');
-                }
-            })
-            .catch((err) => {
-                progressContainer.style.display = 'none';
-                console.error('Error:', err);
-                showAlert('error', 'Произошла ошибка. Обратитесь к разработчику.');
-            });
-    });
-
-    function storeFiles(file1, file2) {
-        fetch('/store_history', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({file1, file2})
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'ok') {
-                    // В истории храним уже новые безопасные пути
-                    addToHistory(data.file1, data.file2);
-                } else {
-                    showAlert('error', 'Не удалось сохранить файлы в историю: ' + data.message);
-                }
-            })
-            .catch(err => showAlert('error', 'Ошибка при сохранении в историю: ' + err));
-    }
-
-    function addToHistory(file1, file2) {
-        const history = JSON.parse(localStorage.getItem('conversionHistory')) || [];
-        history.unshift({
-            time: new Date().toISOString(),
-            file1,
-            file2
-        });
-        localStorage.setItem('conversionHistory', JSON.stringify(history));
-    }
-
-    function renderHistory(filterText = '') {
-        historyList.innerHTML = '';
-
-        const history = JSON.parse(localStorage.getItem('conversionHistory')) || [];
-        if (!history.length) {
-            historyList.innerHTML = '<li class="list-group-item text-muted">История пуста</li>';
-            return;
-        }
-
-        const filteredHistory = history.filter(entry => {
-            const dateObj = new Date(entry.time);
-            const dateString = `${String(dateObj.getDate()).padStart(2, '0')}.${String(dateObj.getMonth() + 1).padStart(2, '0')}.${dateObj.getFullYear()} ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}:${String(dateObj.getSeconds()).padStart(2, '0')}`;
-
-            return dateString.includes(filterText) || entry.file1.includes(filterText) || entry.file2.includes(filterText);
-        });
-
-        if (filteredHistory.length === 0) {
-            historyList.innerHTML = '<li class="list-group-item text-muted">Нет совпадений</li>';
-            return;
-        }
-
-        filteredHistory.forEach(entry => {
-            const li = document.createElement('li');
-            li.className = 'list-group-item history-item';
-
-            const dateObj = new Date(entry.time);
-            const dateString = `${String(dateObj.getDate()).padStart(2, '0')}.${String(dateObj.getMonth() + 1).padStart(2, '0')}.${dateObj.getFullYear()} ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}:${String(dateObj.getSeconds()).padStart(2, '0')}`;
-
-            const dateHtml = highlightText(dateString, filterText);
-            const file1Html = highlightText(entry.file1, filterText);
-            const file2Html = highlightText(entry.file2, filterText);
-
-            li.innerHTML = `
-          <div class="d-flex justify-content-between align-items-center">
-            <small class="text-muted">${dateHtml}</small>
-            <button class="btn btn-danger btn-sm">Удалить</button>
-          </div>
-          <div>
-            <strong>File1:</strong> <pre class="text-break">${file1Html}</pre>
-            <strong>File2:</strong> <pre class="text-break">${file2Html}</pre>
-            <span class="text-secondary" style="font-size: 0.8rem;">(Нажмите, чтобы восстановить)</span>
-          </div>
-        `;
-
-            li.addEventListener('click', (evt) => {
-                if (evt.target.tagName.toLowerCase() === 'button') return; // Игнорируем кнопку удаления
-                selectedFile1 = entry.file1;
-                selectedFile2 = entry.file2;
-                filePath1.textContent = entry.file1;
-                filePath2.textContent = entry.file2;
-                filePath1.style.display = 'block';
-                filePath2.style.display = 'block';
-                historyModal.hide();
-            });
-
-            li.querySelector('button').addEventListener('click', () => {
-                if (!confirm('Удалить эту запись из истории?')) return;
-                fetch('/delete_history_item', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({file1: entry.file1, file2: entry.file2})
-                })
-                    .then(r => r.json())
-                    .then(d => {
-                        if (d.status === 'ok') {
-                            removeFromHistory(entry.file1, entry.file2);
-                            renderHistory(filterText);
-                        } else {
-                            alert('Ошибка удаления: ' + d.message);
-                        }
-                    })
-                    .catch(err => alert('Сетевая ошибка при удалении: ' + err));
-            });
-
-            historyList.appendChild(li);
-        });
-    }
-
-    function removeFromHistory(f1, f2) {
-        let history = JSON.parse(localStorage.getItem('conversionHistory')) || [];
-        history = history.filter(item => item.file1 !== f1 || item.file2 !== f2);
-        localStorage.setItem('conversionHistory', JSON.stringify(history));
-    }
-
-    function highlightText(original, search) {
-        if (!search) return original;
-        const re = new RegExp(search, 'gi');
-        return original.replace(re, (match) => `<span class="highlight">${match}</span>`);
-    }
-
-    function setProgress(percent) {
-        progressBar.style.width = percent + '%';
-        progressBar.setAttribute('aria-valuenow', percent);
-    }
-
-    function showAlert(type, message) {
-        alertBox.style.display = 'block';
-        alertBox.textContent = message;
-        alertBox.className = 'alert';
-        if (type === 'success') {
-            alertBox.classList.add('alert-success', 'fw-bold', 'shadow');
-        } else {
-            alertBox.classList.add('alert-danger', 'fw-bold', 'shadow');
-        }
-    }
-
-    function hideAlert() {
-        alertBox.style.display = 'none';
-        alertBox.textContent = '';
-        alertBox.className = 'alert';
-    }
-</script>
+<script type="module" src="{{ url_for('static', filename='js/main_window.js') }}"></script>
 </body>
 </html>
