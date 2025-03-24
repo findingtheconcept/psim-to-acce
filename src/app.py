@@ -3,7 +3,7 @@ import os
 import logging
 from threading import Thread
 
-import webview
+import pywebview
 from flask import Flask
 from routes import bp as main_bp
 
