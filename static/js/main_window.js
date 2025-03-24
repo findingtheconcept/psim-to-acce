@@ -318,7 +318,7 @@ btnConvert.addEventListener("click", async () => {
   }
   let outputPath = ""
   try {
-    outputPath = await pywebview.api.select_save_file()
+    outputPath = await pywebview.api.select_save_file_psim()
   } catch {
     showToastPSIM("Ошибка", "Ошибка при выборе пути сохранения", false)
     return
@@ -392,7 +392,7 @@ btnConvertIFC.addEventListener("click", async () => {
   }
   let outputPath = ""
   try {
-    outputPath = await pywebview.api.select_save_file()
+    outputPath = await pywebview.api.select_save_file_ifc()
   } catch {
     showToastIFC("Ошибка", "Ошибка при выборе пути сохранения", false)
     return
