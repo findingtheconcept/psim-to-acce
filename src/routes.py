@@ -3,7 +3,7 @@ import os
 import shutil
 from flask import Blueprint, request, jsonify, render_template
 from converter import convert_psim_to_asse
-from IFCconverter import convert_excel_to_psim
+from ifc_converter import convert_excel_to_ifc
 from utils import get_app_folder
 
 bp = Blueprint('main', __name__)
@@ -31,14 +31,14 @@ def convert_route():
 @bp.route('/convert_ifc', methods=['POST'])
 def convert_ifc_route():
     data = request.json
-    ifc_file = data.get('inputFile')
-    excel_file = data.get('secondFile')
+    ifc_file = data.get('ifcFile')
+    excel_file = data.get('attribFile')
     output_file = data.get('outputFile')
     logging.info(f"Convert from {ifc_file} and {excel_file} => {output_file}")
     if os.path.isdir(output_file):
         output_file = os.path.join(output_file, "ifc_added.ifc")
     try:
-        convert_excel_to_psim(ifc_file, excel_file, output_file)
+        convert_excel_to_ifc(ifc_file, excel_file, output_file)
         return jsonify({"status": "success", "message": "Конвертирование завершено успешно!"})
     except Exception as e:
         logging.error(f"Error during conversion: {e}")

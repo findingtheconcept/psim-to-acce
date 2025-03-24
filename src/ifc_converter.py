@@ -232,7 +232,7 @@ def fix_cyrillic_header(ifc_file):
     except Exception as e:
         logging.error(f"Ошибка при обновлении заголовка IFC: {e}")
 
-def convert_excel_to_psim(ifc_model, exceltab, output):
+def convert_excel_to_ifc(ifc_model, exceltab, output):
 
     ifc_file = load_ifc_model(ifc_model)
     if ifc_file is None:
