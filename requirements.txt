@@ -3,9 +3,4 @@ openpyxl
 Flask~=3.1.0
 ifcopenshell
 requests~=2.32.3
-<<<<<<< HEAD
 ifc2gltf
-=======
-cefpython3; sys_platform == 'win32'
-pythonnet; sys_platform == 'win32'
->>>>>>> origin/master

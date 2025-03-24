@@ -1,21 +1,17 @@
-import objc
-
-if not hasattr(objc._objc, '__file__'):
-    import ctypes
-    setattr(objc._objc, '__file__', '/usr/lib/libobjc.A.dylib')
+import platform
+system_name = platform.system()
+if system_name == 'Darwin':    
+    import objc
+    if not hasattr(objc._objc, '__file__'):
+        import ctypes
+        setattr(objc._objc, '__file__', '/usr/lib/libobjc.A.dylib')
 
 import sys
 import os
 import logging
 from threading import Thread
-<<<<<<< HEAD
 
-import pywebview
-=======
-import json
 import webview
-from webview.dom import DOMEventHandler
->>>>>>> origin/master
 from flask import Flask
 from routes import bp as main_bp
 
