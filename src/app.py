@@ -1,11 +1,11 @@
-import sys
-import os
 import logging
+import os
+import sys
 from threading import Thread
 
-import requests
-from flask import Flask, render_template, request
 import webview
+from flask import Flask
+from routes import bp as main_bp
 
 if hasattr(sys, '_MEIPASS'):
     base_path = sys._MEIPASS
@@ -20,29 +20,32 @@ app = Flask(__name__, template_folder=template_folder, static_folder=static_fold
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-def on_closed():
-    logger.info("Window closed. Stopping Flask server...")
-    try:
-        os.environ.pop('HTTP_PROXY', None)
-        os.environ.pop('HTTPS_PROXY', None)
-        proxies = {"http": None, "https": None}
+app.register_blueprint(main_bp)
 
-        requests.get("http://127.0.0.1:5000/shutdown", proxies=proxies, timeout=3)
-    except Exception as e:
-        logger.error(f"Error during server shutdown: {e}")
 
-@app.route('/')
-def index():
-    return render_template('main_window.html')
+class Bridge:
+    def select_source_file(self):
+        result = window.create_file_dialog(
+            webview.OPEN_DIALOG,
+            directory='',
+            allow_multiple=False,
+            save_filename=''
+        )
+        if result and len(result) > 0:
+            return result[0]
+        return ""
 
-@app.route('/shutdown', methods=['GET'])
-def shutdown_route():
-    logger.info("Shutdown request received.")
-    shutdown_func = request.environ.get('werkzeug.server.shutdown')
-    if shutdown_func is None:
-        raise RuntimeError('Not running with the Werkzeug Server')
-    shutdown_func()
-    return "Server shutting down..."
+    def select_save_file(self):
+        result = window.create_file_dialog(
+            webview.SAVE_DIALOG,
+            '.',
+            False,
+            'export_spreadsheet.xlsx'
+        )
+        if result and len(result) > 0:
+            return result
+        return ""
+
 
 def run_flask():
     logger.info("Running Flask back-end...")
@@ -51,16 +54,20 @@ def run_flask():
     except Exception as e:
         logger.error(f"Error caught during starting Flask back-end: {e}")
 
+
 if __name__ == "__main__":
-    thread = Thread(target=run_flask)
-    thread.daemon = True
+    thread = Thread(target=run_flask, daemon=True)
     thread.start()
 
+    bridge = Bridge()
+
     window = webview.create_window(
-        'PSIM to ASSE',
+        'PSIM to ACCE',
         'http://127.0.0.1:5000',
-        width=1200,
-        height=500
+        width=800,
+        height=500,
+        resizable=True,
+        js_api=bridge,
     )
-    window.events.closed += on_closed
-    webview.start()
+
+    webview.start(storage_path=os.path.join(base_path, "webview_data"))
