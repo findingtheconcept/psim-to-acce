@@ -1,3 +1,9 @@
+import objc
+
+if not hasattr(objc._objc, '__file__'):
+    import ctypes
+    setattr(objc._objc, '__file__', '/usr/lib/libobjc.A.dylib')
+
 import sys
 import os
 import logging

@@ -1,10 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-A universal build script to detect the platform and build accordingly:
-- Windows => PyInstaller (.exe)
-- macOS   => py2app (.app)
-"""
 
 import os
 import platform
@@ -12,11 +7,7 @@ import shutil
 import subprocess
 import sys
 
-
 def build_windows():
-    """
-    Builds a single-file .exe using PyInstaller.
-    """
     project_dir = os.path.dirname(os.path.abspath(__file__))
     assets_dir = os.path.join(project_dir, 'assets')
     static_dir = os.path.join(project_dir, 'static')
@@ -36,15 +27,16 @@ def build_windows():
         os.remove(spec_file)
         print("Removed existing build.spec.")
 
+    excluded = []
+
     pyinstaller_cmd = [
         sys.executable, '-m', 'PyInstaller',
         '--clean',
         '--onefile',
         '--windowed',
-        '--add-data', f"{assets_dir};assets",
-        '--add-data', f"{static_dir};static",
-        app_script
-    ]
+        '--add-data', f"{assets_dir}{os.path.pathsep}assets",
+        '--add-data', f"{static_dir}{os.path.pathsep}static",
+    ] + excluded + [app_script]
 
     print("Running PyInstaller on Windows:")
     print(" ".join(pyinstaller_cmd))
@@ -64,9 +56,6 @@ def build_windows():
 
 
 def build_macos():
-    """
-    Builds an .app bundle using py2app (requires build_osx.py).
-    """
     project_dir = os.path.dirname(os.path.abspath(__file__))
     dist_dir = os.path.join(project_dir, 'dist')
 
@@ -80,6 +69,7 @@ def build_macos():
         sys.exit(1)
 
     print("Running py2app on macOS...")
+
     cmd = [sys.executable, 'build_osx.py', 'py2app']
     subprocess.run(cmd, check=True, cwd=project_dir)
 
@@ -99,15 +89,13 @@ def build_macos():
 
 def main():
     system_name = platform.system()
-
     if system_name == 'Windows':
         build_windows()
-    elif system_name == 'Darwin':  # macOS
+    elif system_name == 'Darwin':
         build_macos()
     else:
         print(f"Unsupported platform: {system_name}")
         print("This script only builds for Windows (exe) or macOS (.app).")
-
 
 if __name__ == "__main__":
     main()
