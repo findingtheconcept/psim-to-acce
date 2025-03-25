@@ -25,7 +25,7 @@ OPTIONS = {
         'Security'
     ],
     'excludes': ['cefpython3', 'pythonnet'],
-    'iconfile': 'favicon.icns',
+    'iconfile': 'icon.icns',
     'plist': {
         'CFBundleName': 'PSIM to ACCE',
         'CFBundleShortVersionString': '1.0.0',

@@ -1,8 +1,10 @@
-import objc
+import platform
 
-if not hasattr(objc._objc, '__file__'):
-    import ctypes
-    setattr(objc._objc, '__file__', '/usr/lib/libobjc.A.dylib')
+if platform.system() == 'Darwin':
+    import objc
+
+    if not hasattr(objc._objc, '__file__'):
+        setattr(objc._objc, '__file__', '/usr/lib/libobjc.A.dylib')
 
 import sys
 import os
@@ -10,9 +12,9 @@ import logging
 from threading import Thread
 import json
 import webview
-from webview.dom import DOMEventHandler
 from flask import Flask
 from routes import bp as main_bp
+from webview.dom import DOMEventHandler
 
 if hasattr(sys, '_MEIPASS'):
     base_path = sys._MEIPASS
@@ -59,15 +61,29 @@ class Bridge:
     def select_source_file(self):
         if not window:
             return ""
-        result = window.create_file_dialog(webview.OPEN_DIALOG, directory='', allow_multiple=False)
+        result = window.create_file_dialog(
+            webview.OPEN_DIALOG, directory='', allow_multiple=False
+        )
         if result and len(result) > 0:
             return result[0]
         return ""
 
-    def select_save_file(self):
+    def select_save_file_psim(self):
         if not window:
             return ""
-        result = window.create_file_dialog(webview.SAVE_DIALOG, directory='.', save_filename='export_spreadsheet.xlsx')
+        result = window.create_file_dialog(
+            webview.SAVE_DIALOG, directory='.', save_filename='export_spreadsheet.xlsx'
+        )
+        if result and len(result) > 0:
+            return result
+        return ""
+
+    def select_save_file_ifc(self):
+        if not window:
+            return ""
+        result = window.create_file_dialog(
+            webview.SAVE_DIALOG, directory='.', save_filename='ifc_added.ifc'
+        )
         if result and len(result) > 0:
             return result
         return ""
@@ -110,6 +126,7 @@ def bind_drag_and_drop():
         t = e['target'].get('id')
         window.evaluate_js(f'document.getElementById("{t}").classList.remove("dragover")')
         path = fs[0].get('pywebviewFullPath', '')
+
         if t == 'psimCard1':
             window.evaluate_js(
                 f'document.getElementById("filePath1").textContent="{path}";'
@@ -136,6 +153,7 @@ def bind_drag_and_drop():
             )
 
     doc = window.dom.document
+
     doc.events.dragenter += DOMEventHandler(on_drag_enter, True, True)
     doc.events.dragover += DOMEventHandler(on_drag_over, True, True)
     doc.events.dragleave += DOMEventHandler(on_drag_leave, True, True)
@@ -147,7 +165,6 @@ if __name__ == "__main__":
     thread.start()
 
     bridge = Bridge()
-
     window = webview.create_window(
         title='PSIM to ACCE',
         url='http://127.0.0.1:5000',
