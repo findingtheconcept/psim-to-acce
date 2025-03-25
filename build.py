@@ -29,12 +29,15 @@ def build_windows():
 
     excluded = []
 
+    icon_path = os.path.join(project_dir, 'assets', 'app_icon.ico')
+
     pyinstaller_cmd = [
         sys.executable, '-m', 'PyInstaller',
         '--clean',
         '--onefile',
         '--windowed',
         '--noconfirm',
+        '--icon', icon_path,
         '--add-data', f"{assets_dir}{os.path.pathsep}assets",
         '--add-data', f"{static_dir}{os.path.pathsep}static",
     ] + excluded + [app_script]
