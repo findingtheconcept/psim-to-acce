@@ -380,6 +380,14 @@
 
     const btnHistory = document.getElementById('btnHistory');
     const historyModalEl = document.getElementById('historyModal');
+
+    historyModalEl.addEventListener('hidden.bs.modal', () => {
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        document.body.style.overflow = 'visible';
+        document.body.style.paddingRight = '0';
+    });
+
+
     const historyModal = new bootstrap.Modal(historyModalEl, {});
     const historyList = document.getElementById('historyList');
     const historySearch = document.getElementById('historySearch');
@@ -593,7 +601,9 @@
                     filePath2.textContent = entry.file2;
                     filePath1.style.display = 'block';
                     filePath2.style.display = 'block';
+                    historyModalEl.classList.remove('show');
                     historyModal.hide();
+                    document.body.classList.remove('modal-open');
                 });
 
                 li.querySelector('button').addEventListener('click', () => {
