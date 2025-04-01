@@ -1,4 +1,6 @@
 import platform
+import subprocess
+import webbrowser
 
 if platform.system() == 'Darwin':
     import objc
@@ -53,11 +55,24 @@ def write_theme(theme):
     except:
         pass
 
-
 app.register_blueprint(main_bp)
 
 
 class Bridge:
+    def open_pdf_manual(self):
+        pdf_path = os.path.join(base_path, 'static', 'manual', 'guide.pdf')
+        if not os.path.exists(pdf_path):
+            return "not_found"
+
+        if sys.platform.startswith("darwin"):  # macOS
+            subprocess.Popen(["open", pdf_path])
+        elif sys.platform.startswith("win"):    # Windows
+            os.startfile(pdf_path)
+        else:                                   # Linux / etc
+            subprocess.Popen(["xdg-open", pdf_path])
+
+        return "ok"
+
     def select_source_file(self):
         if not window:
             return ""
