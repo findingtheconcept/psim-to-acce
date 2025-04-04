@@ -27,6 +27,8 @@ const historyList = document.getElementById("historyList")
 const historySearch = document.getElementById("historySearch")
 const btnClearAll = document.getElementById("btnClearAll")
 
+const btnHelp = document.getElementById('btnHelp')
+
 let selectedFile1 = ""
 let selectedFile2 = ""
 let selectedIFC = ""
@@ -451,4 +453,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("appRoot").classList.add("dark-mode")
   }
   showScreenPSIM()
+})
+
+
+btnHelp.addEventListener("click", async () => {
+  try {
+    const result = await pywebview.api.open_pdf_manual()
+    if (result === "not_found") {
+      Swal.fire("Ошибка", "PDF не найден. Проверьте сборку приложения.", "error")
+    }
+  } catch (err) {
+    Swal.fire("Ошибка", String(err), "error")
+  }
 })
