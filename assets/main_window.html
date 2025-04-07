@@ -248,6 +248,9 @@
           max-width: 300px;
       }
   </style>
+
+  <script src="{{ url_for('static', filename='js/sweetalert2.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
 </head>
 <body>
 <div class="app-container" id="appRoot">
@@ -309,16 +312,17 @@
     <h4 class="mb-4">Работа с 3D-моделями (IFC)</h4>
     <div class="file-selection-row">
       <div class="file-card" id="ifcCard1">
-        <div class="file-card-header">Выбор 3D модели</div>
+        <div class="file-card-header">Выбор 3D модели(-ей)</div>
         <div class="file-card-body">
-          <button id="btnSelectIFC" class="btn btn-outline-primary mb-3"><i class="bi bi-folder2-open"></i> Выбрать IFC
+          <button id="btnSelectIFC" class="btn btn-outline-primary mb-3">
+            <i class="bi bi-folder2-open"></i> Выбрать IFC (несколько)
           </button>
           <p class="text-muted small mb-2">Или перетащите модель сюда</p>
-          <pre id="ifcPath" class="mt-2 text-muted" style="display: none;"></pre>
+          <ul id="ifcList" class="list-group small mt-2" style="max-height:120px; overflow:auto;"></ul>
         </div>
       </div>
       <div class="file-card" id="ifcCard2">
-        <div class="file-card-header">Атрибуты</div>
+        <div class="file-card-header">Атрибуты (одна таблица)</div>
         <div class="file-card-body">
           <button id="btnSelectAttrib" class="btn btn-outline-primary mb-3"><i class="bi bi-folder2-open"></i> Выбрать
             файл
@@ -329,8 +333,8 @@
       </div>
     </div>
     <div class="button-row">
-      <button id="btnConvertIFC" class="btn btn-success btn-lg shadow-sm"><i class="bi bi-arrow-right-square"></i>
-        Конвертировать
+      <button id="btnConvertIFC" class="btn btn-success btn-lg shadow-sm">
+        <i class="bi bi-arrow-right-square"></i> Конвертировать
       </button>
     </div>
     <div class="toast-container">
@@ -365,8 +369,6 @@
     </div>
   </div>
 </div>
-<script src="{{ url_for('static', filename='js/sweetalert2.min.js') }}"></script>
-<script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
-<script type="module" src="{{ url_for('static', filename='js/main_window.js') }}"></script>
+<script defer src="{{ url_for('static', filename='js/main_window.js') }}"></script>
 </body>
 </html>

@@ -5,18 +5,18 @@ const screenIFC = document.getElementById("screenIFC")
 const titleText = document.getElementById("titleText")
 const btnToggleIFC = document.getElementById("btnToggleIFC")
 const btnDarkMode = document.getElementById("btnDarkMode")
+const btnHelp = document.getElementById("btnHelp")
 
 const btnSelectFile1 = document.getElementById("btnSelectFile1")
 const btnSelectFile2 = document.getElementById("btnSelectFile2")
 const filePath1 = document.getElementById("filePath1")
 const filePath2 = document.getElementById("filePath2")
-
 const btnConvert = document.getElementById("btnConvert")
+
 const progressContainer = document.getElementById("progressContainer")
 const progressBar = document.getElementById("progressBar")
 
 const btnSelectIFC = document.getElementById("btnSelectIFC")
-const ifcPath = document.getElementById("ifcPath")
 const btnSelectAttrib = document.getElementById("btnSelectAttrib")
 const attribPath = document.getElementById("attribPath")
 const btnConvertIFC = document.getElementById("btnConvertIFC")
@@ -27,12 +27,10 @@ const historyList = document.getElementById("historyList")
 const historySearch = document.getElementById("historySearch")
 const btnClearAll = document.getElementById("btnClearAll")
 
-const btnHelp = document.getElementById('btnHelp')
-
+let selectedIFCs = []
+let selectedAttrib = ""
 let selectedFile1 = ""
 let selectedFile2 = ""
-let selectedIFC = ""
-let selectedAttrib = ""
 
 function setProgress(p) {
   progressBar.style.width = p + "%"
@@ -40,7 +38,7 @@ function setProgress(p) {
 }
 
 function formatDateTime(dateObj) {
-  const pad = n => String(n).padStart(2, "0")
+  const pad = (n) => String(n).padStart(2, "0")
   const d = pad(dateObj.getDate())
   const m = pad(dateObj.getMonth() + 1)
   const y = dateObj.getFullYear()
@@ -53,7 +51,7 @@ function formatDateTime(dateObj) {
 function highlightText(original, search) {
   if (!search) return original
   const re = new RegExp(search, "gi")
-  return original.replace(re, match => `<span class="highlight">${match}</span>`)
+  return original.replace(re, (match) => `<span class="highlight">${match}</span>`)
 }
 
 async function fetchJson(url, options = {}) {
@@ -73,14 +71,16 @@ function loadHistory() {
 function addToHistory(file1, file2) {
   const history = JSON.parse(localStorage.getItem("conversionHistory")) || []
   history.unshift({
-    time: new Date().toISOString(), file1, file2
+    time: new Date().toISOString(),
+    file1,
+    file2,
   })
   localStorage.setItem("conversionHistory", JSON.stringify(history))
 }
 
 function removeFromHistory(f1, f2) {
   let history = JSON.parse(localStorage.getItem("conversionHistory")) || []
-  history = history.filter(item => item.file1 !== f1 || item.file2 !== f2)
+  history = history.filter((item) => item.file1 !== f1 || item.file2 !== f2)
   localStorage.setItem("conversionHistory", JSON.stringify(history))
 }
 
@@ -91,15 +91,19 @@ function renderHistory(filterText = "") {
     historyList.innerHTML = '<li class="list-group-item text-muted">История пуста</li>'
     return
   }
-  const filtered = history.filter(entry => {
+  const filtered = history.filter((entry) => {
     const dateString = formatDateTime(new Date(entry.time))
-    return (dateString.includes(filterText) || entry.file1.includes(filterText) || entry.file2.includes(filterText))
+    return (
+      dateString.includes(filterText) ||
+      entry.file1.includes(filterText) ||
+      entry.file2.includes(filterText)
+    )
   })
   if (!filtered.length) {
     historyList.innerHTML = '<li class="list-group-item text-muted">Нет совпадений</li>'
     return
   }
-  filtered.forEach(entry => {
+  filtered.forEach((entry) => {
     const li = document.createElement("li")
     li.className = "list-group-item history-item"
     const dateObj = new Date(entry.time)
@@ -107,6 +111,7 @@ function renderHistory(filterText = "") {
     const dateHtml = highlightText(dateString, filterText)
     const file1Html = highlightText(entry.file1, filterText)
     const file2Html = highlightText(entry.file2, filterText)
+
     li.innerHTML = `
       <div class="d-flex justify-content-between align-items-center">
         <small class="text-muted">${dateHtml}</small>
@@ -117,16 +122,20 @@ function renderHistory(filterText = "") {
         <strong>File2:</strong> <pre class="text-break">${file2Html}</pre>
         <span class="text-secondary" style="font-size: 0.8rem;">(Нажмите, чтобы восстановить)</span>
       </div>`
-    li.addEventListener("click", evt => {
+
+    li.addEventListener("click", (evt) => {
       if (evt.target.tagName.toLowerCase() === "button") return
       selectedFile1 = entry.file1
       selectedFile2 = entry.file2
-      filePath1.textContent = entry.file1
-      filePath2.textContent = entry.file2
-      filePath1.style.display = "block"
-      filePath2.style.display = "block"
+      if (filePath1 && filePath2) {
+        filePath1.textContent = entry.file1
+        filePath2.textContent = entry.file2
+        filePath1.style.display = "block"
+        filePath2.style.display = "block"
+      }
       historyModal.hide()
     })
+
     li.querySelector("button").addEventListener("click", async () => {
       const confirmRes = await Swal.fire({
         title: "Удалить запись?",
@@ -134,14 +143,14 @@ function renderHistory(filterText = "") {
         icon: "warning",
         showCancelButton: true,
         confirmButtonText: "Да",
-        cancelButtonText: "Отмена"
+        cancelButtonText: "Отмена",
       })
       if (!confirmRes.isConfirmed) return
       try {
         const data = await fetchJson("/delete_history_item", {
           method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({file1: entry.file1, file2: entry.file2})
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ file1: entry.file1, file2: entry.file2 }),
         })
         if (data.status === "ok") {
           removeFromHistory(entry.file1, entry.file2)
@@ -203,8 +212,14 @@ function showToastIFC(title, body, success = true) {
   bsToast.show()
 }
 
-function shakeIfEmpty(file, cardId) {
-  if (!file) {
+function shakeIfEmpty(objOrArray, cardId) {
+  let needShake = false
+  if (Array.isArray(objOrArray)) {
+    if (!objOrArray.length) needShake = true
+  } else {
+    if (!objOrArray) needShake = true
+  }
+  if (needShake) {
     const el = document.getElementById(cardId)
     el.classList.add("shake")
     setTimeout(() => el.classList.remove("shake"), 400)
@@ -214,7 +229,9 @@ function shakeIfEmpty(file, cardId) {
 async function storeFiles(file1, file2) {
   try {
     const data = await fetchJson("/store_history", {
-      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({file1, file2})
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file1, file2 }),
     })
     if (data.status === "ok") {
       addToHistory(data.file1, data.file2)
@@ -240,7 +257,17 @@ btnDarkMode.addEventListener("click", async () => {
   const newTheme = isDarkNow ? "dark" : "light"
   try {
     await pywebview.api.set_theme(newTheme)
-  } catch {
+  } catch {}
+})
+
+btnHelp.addEventListener("click", async () => {
+  try {
+    const result = await pywebview.api.open_pdf_manual()
+    if (result === "not_found") {
+      Swal.fire("Ошибка", "PDF не найден. Проверьте сборку приложения.", "error")
+    }
+  } catch (err) {
+    Swal.fire("Ошибка", String(err), "error")
   }
 })
 
@@ -257,11 +284,11 @@ btnClearAll.addEventListener("click", async () => {
     icon: "warning",
     showCancelButton: true,
     confirmButtonText: "Да",
-    cancelButtonText: "Отмена"
+    cancelButtonText: "Отмена",
   })
   if (!confirmRes.isConfirmed) return
   try {
-    const data = await fetchJson("/clear_all_history", {method: "POST"})
+    const data = await fetchJson("/clear_all_history", { method: "POST" })
     if (data.status === "ok") {
       localStorage.setItem("conversionHistory", JSON.stringify([]))
       renderHistory()
@@ -331,11 +358,17 @@ btnConvert.addEventListener("click", async () => {
   }
   progressContainer.style.display = "block"
   setProgress(10)
-  const payload = {inputFile: selectedFile1, secondFile: selectedFile2, outputFile: outputPath}
+  const payload = {
+    inputFile: selectedFile1,
+    secondFile: selectedFile2,
+    outputFile: outputPath,
+  }
   setProgress(50)
   try {
     const result = await fetchJson("/convert", {
-      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     })
     setProgress(100)
     progressContainer.style.display = "none"
@@ -351,17 +384,29 @@ btnConvert.addEventListener("click", async () => {
   }
 })
 
+function addIFCItemToUI(path) {
+  let ul = document.getElementById("ifcList")
+  if (!ul) {
+    ul = document.createElement("ul")
+    ul.id = "ifcList"
+    ul.className = "list-group small mt-2"
+    const cardBody = document.getElementById("ifcCard1").querySelector(".file-card-body")
+    cardBody.appendChild(ul)
+  }
+  const li = document.createElement("li")
+  li.className = "list-group-item text-break"
+  li.textContent = path
+  ul.appendChild(li)
+}
+
 btnSelectIFC.addEventListener("click", async () => {
-  ifcPath.textContent = ""
-  ifcPath.style.display = "none"
   try {
-    const path = await pywebview.api.select_source_file()
-    if (path) {
-      selectedIFC = path
-      ifcPath.textContent = path
-      ifcPath.style.display = "block"
-    } else {
-      selectedIFC = ""
+    const paths = await pywebview.api.select_source_files_ifc()
+    if (paths && paths.length) {
+      paths.forEach((p) => {
+        selectedIFCs.push(p)
+        addIFCItemToUI(p)
+      })
     }
   } catch {
     showToastIFC("Ошибка", "Ошибка при выборе IFC", false)
@@ -386,57 +431,79 @@ btnSelectAttrib.addEventListener("click", async () => {
 })
 
 btnConvertIFC.addEventListener("click", async () => {
-  if (!selectedIFC || !selectedAttrib) {
-    shakeIfEmpty(selectedIFC, "ifcCard1")
-    shakeIfEmpty(selectedAttrib, "ifcCard2")
-    showToastIFC("Ошибка", "Нужно выбрать IFC и атрибуты", false)
+  shakeIfEmpty(selectedIFCs, "ifcCard1")
+  shakeIfEmpty(selectedAttrib, "ifcCard2")
+  if (!selectedIFCs.length || !selectedAttrib) {
+    showToastIFC("Ошибка", "Нужно выбрать хотя бы один IFC и один файл атрибутов", false)
     return
   }
-  let outputPath = ""
+  let outputFolder = ""
   try {
-    outputPath = await pywebview.api.select_save_file_ifc()
+    outputFolder = await pywebview.api.select_folder_ifc()
   } catch {
-    showToastIFC("Ошибка", "Ошибка при выборе пути сохранения", false)
+    showToastIFC("Ошибка", "Ошибка при выборе папки для сохранения", false)
     return
   }
-  if (!outputPath) {
-    showToastIFC("Ошибка", "Путь для сохранения не выбран", false)
+  if (!outputFolder) {
+    showToastIFC("Ошибка", "Папка для сохранения не выбрана", false)
     return
   }
+
   progressContainer.style.display = "block"
   setProgress(10)
-  const payload = {ifcFile: selectedIFC, attribFile: selectedAttrib, outputFile: outputPath}
-  setProgress(50)
-  try {
-    const result = await fetchJson("/convert_ifc", {
-      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)
-    })
-    setProgress(100)
-    progressContainer.style.display = "none"
-    if (result.status === "success") {
-      showToastIFC("Успех", result.message || "Успешно завершено!", true)
-    } else {
-      showToastIFC("Ошибка", result.message || "Произошла ошибка при конвертации", false)
+
+  let current = 0
+  const total = selectedIFCs.length
+  for (let i = 0; i < total; i++) {
+    const ifcFile = selectedIFCs[i]
+    const baseName = ifcFile.split(/[\\/]/).pop().replace(/\.ifc$/i, "")
+    const outFile = `${outputFolder}${window.pywebview ? '\\' : '/'}${baseName}_converted.ifc`
+    current = Math.round((i / total) * 50) + 10
+    setProgress(current)
+
+    const payload = {
+      ifcFile: ifcFile,
+      attribFile: selectedAttrib,
+      outputFile: outFile,
     }
-  } catch {
-    progressContainer.style.display = "none"
-    showToastIFC("Ошибка", "Произошла ошибка. Обратитесь к разработчику.", false)
+
+    try {
+      const result = await fetchJson("/convert_ifc", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      if (result.status !== "success") {
+        showToastIFC("Ошибка", `Ошибка: ${ifcFile} => ${result.message}`, false)
+      }
+    } catch {
+      showToastIFC("Ошибка", `Ошибка при конвертации ${ifcFile}`, false)
+    }
   }
+
+  setProgress(100)
+  progressContainer.style.display = "none"
+  showToastIFC("Успех", "Все выбранные IFC успешно сконвертированы!", true)
 })
+
+window.addIFCFile = (path) => {
+  selectedIFCs.push(path)
+  addIFCItemToUI(path)
+}
 
 window.selectFile = (type, path) => {
   if (type === "psim1") {
     selectedFile1 = path
   } else if (type === "psim2") {
     selectedFile2 = path
-  } else if (type === "ifc") {
-    selectedIFC = path
   } else if (type === "attrib") {
     selectedAttrib = path
+    attribPath.textContent = path
+    attribPath.style.display = "block"
   }
 }
 
-document.addEventListener("keydown", e => {
+document.addEventListener("keydown", (e) => {
   if (e.ctrlKey && e.key.toLowerCase() === "h") {
     e.preventDefault()
     btnHistory.click()
@@ -446,23 +513,25 @@ document.addEventListener("keydown", e => {
   }
 })
 
-document.addEventListener("DOMContentLoaded", async () => {
+async function waitForPywebview() {
+  while (typeof pywebview === "undefined" || !pywebview.api) {
+    await new Promise(resolve => setTimeout(resolve, 50))
+  }
+}
+
+
+async function initApp() {
+  await waitForPywebview()
+
   loadHistory()
+
   const theme = await pywebview.api.get_theme()
+
   if (theme === "dark") {
     document.getElementById("appRoot").classList.add("dark-mode")
   }
+
   showScreenPSIM()
-})
+}
 
-
-btnHelp.addEventListener("click", async () => {
-  try {
-    const result = await pywebview.api.open_pdf_manual()
-    if (result === "not_found") {
-      Swal.fire("Ошибка", "PDF не найден. Проверьте сборку приложения.", "error")
-    }
-  } catch (err) {
-    Swal.fire("Ошибка", String(err), "error")
-  }
-})
+document.addEventListener("DOMContentLoaded", initApp)

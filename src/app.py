@@ -1,6 +1,5 @@
 import platform
 import subprocess
-import webbrowser
 
 if platform.system() == 'Darwin':
     import objc
@@ -17,6 +16,7 @@ import webview
 from flask import Flask
 from routes import bp as main_bp
 from webview.dom import DOMEventHandler
+from utils import get_app_folder
 
 if hasattr(sys, '_MEIPASS'):
     base_path = sys._MEIPASS
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_theme_file_path():
-    return os.path.join(os.path.expanduser("~"), "app_theme_config.json")
+    return os.path.join(get_app_folder(), "app_theme_config.json")
 
 
 def read_theme():
@@ -55,6 +55,7 @@ def write_theme(theme):
     except:
         pass
 
+
 app.register_blueprint(main_bp)
 
 
@@ -63,14 +64,12 @@ class Bridge:
         pdf_path = os.path.join(base_path, 'static', 'manual', 'guide.pdf')
         if not os.path.exists(pdf_path):
             return "not_found"
-
-        if sys.platform.startswith("darwin"):  # macOS
+        if sys.platform.startswith("darwin"):
             subprocess.Popen(["open", pdf_path])
-        elif sys.platform.startswith("win"):    # Windows
+        elif sys.platform.startswith("win"):
             os.startfile(pdf_path)
-        else:                                   # Linux / etc
+        else:
             subprocess.Popen(["xdg-open", pdf_path])
-
         return "ok"
 
     def select_source_file(self):
@@ -83,6 +82,18 @@ class Bridge:
             return result[0]
         return ""
 
+    def select_source_files_ifc(self):
+        if not window:
+            return []
+        result = window.create_file_dialog(
+            webview.OPEN_DIALOG,
+            directory='',
+            allow_multiple=True
+        )
+        if result and len(result) > 0:
+            return result
+        return []
+
     def select_save_file_psim(self):
         if not window:
             return ""
@@ -93,14 +104,15 @@ class Bridge:
             return result
         return ""
 
-    def select_save_file_ifc(self):
+    def select_folder_ifc(self):
         if not window:
             return ""
         result = window.create_file_dialog(
-            webview.SAVE_DIALOG, directory='.', save_filename='ifc_added.ifc'
+            webview.FOLDER_DIALOG,  # Выбор папки
+            directory='.'
         )
         if result and len(result) > 0:
-            return result
+            return result[0]
         return ""
 
     def get_theme(self):
@@ -140,6 +152,7 @@ def bind_drag_and_drop():
             return
         t = e['target'].get('id')
         window.evaluate_js(f'document.getElementById("{t}").classList.remove("dragover")')
+
         path = fs[0].get('pywebviewFullPath', '')
 
         if t == 'psimCard1':
@@ -156,9 +169,7 @@ def bind_drag_and_drop():
             )
         elif t == 'ifcCard1':
             window.evaluate_js(
-                f'document.getElementById("ifcPath").textContent="{path}";'
-                f'document.getElementById("ifcPath").style.display="block";'
-                f'window.selectFile("ifc","{path}");'
+                f'window.addIFCFile("{path}");'
             )
         elif t == 'ifcCard2':
             window.evaluate_js(
@@ -168,7 +179,6 @@ def bind_drag_and_drop():
             )
 
     doc = window.dom.document
-
     doc.events.dragenter += DOMEventHandler(on_drag_enter, True, True)
     doc.events.dragover += DOMEventHandler(on_drag_over, True, True)
     doc.events.dragleave += DOMEventHandler(on_drag_leave, True, True)
@@ -186,7 +196,7 @@ if __name__ == "__main__":
         width=900,
         height=600,
         resizable=False,
-        js_api=bridge
+        js_api=bridge,
     )
 
     webview.start(bind_drag_and_drop, window)

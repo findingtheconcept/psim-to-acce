@@ -49,7 +49,7 @@ def store_history():
     data = request.json
     orig_file1 = data.get('file1')
     orig_file2 = data.get('file2')
-    folder = get_app_folder()
+    folder = os.path.join(get_app_folder(), 'history')
     base1 = os.path.basename(orig_file1)
     base2 = os.path.basename(orig_file2)
     new_file1 = os.path.join(folder, f"file1_{int(os.path.getmtime(orig_file1))}_{base1}")
