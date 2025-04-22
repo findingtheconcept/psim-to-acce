@@ -1,23 +1,13 @@
 import ifcopenshell
 import ifcopenshell.guid
 import openpyxl
-import logging
-
-# Настройка логирования
-logging.basicConfig(
-    filename="update_pipe_properties.log",
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
 
 def load_ifc_model(ifc_file_path):
     """Загружает IFC-модель из файла."""
     try:
         model = ifcopenshell.open(ifc_file_path)
-        logging.info(f"IFC модель загружена из файла: {ifc_file_path}")
         return model
     except Exception as e:
-        logging.error(f"Ошибка загрузки IFC-файла: {e}")
         return None
 
 def read_xlsx(file_path):
@@ -37,10 +27,8 @@ def read_xlsx(file_path):
                 "diameter": row[15]   # Диаметр трубы в метрах
             }
             data.append(record)
-        logging.info(f"Загружено {len(data)} записей из XLSX: {file_path}")
         return data
     except Exception as e:
-        logging.error(f"Ошибка при чтении XLSX: {e}")
         return []
 
 def find_pipe_elements(ifc_file):
@@ -50,10 +38,8 @@ def find_pipe_elements(ifc_file):
     try:
         pipe_elements = [el for el in ifc_file.by_type("IfcElementAssembly")
                          if el.Name and "PIPE" in el.Name.upper()]
-        logging.info(f"Найдено {len(pipe_elements)} элементов PIPE.")
         return pipe_elements
     except Exception as e:
-        logging.error(f"Ошибка при поиске элементов PIPE: {e}")
         return []
 
 def extract_component_elements(pipe_elements):
@@ -65,15 +51,11 @@ def extract_component_elements(pipe_elements):
     """
     comp_map = {}
     for pipe in pipe_elements:
-        logging.info(f"Обработка PIPE: {pipe.Name}")
         for rel in getattr(pipe, "IsDecomposedBy", []):
             for comp in getattr(rel, "RelatedObjects", []):
                 if comp.is_a("IfcElementAssembly"):
                     comp_name = comp.Name
                     comp_map[comp_name] = comp.GlobalId
-                    logging.info(f"Найден компонент: {comp_name} с GUID: {comp.GlobalId} в PIPE: {pipe.Name}")
-    total_components = len(comp_map)
-    logging.info(f"Извлечено {total_components} компонентов из PIPE.")
     return comp_map
 
 def update_ifc_properties(ifc_file, comp_map, xlsx_data):
@@ -85,19 +67,14 @@ def update_ifc_properties(ifc_file, comp_map, xlsx_data):
       - PipeLength (значение из столбца Pipe length * 1000, перевод в мм)
       - PipeDiameter (значение из столбца Pipe diameter * 1000, перевод в мм)
     """
-    updated_count = 0
-
     for record in xlsx_data:
         item_desc = record["item_desc"]
         user_tag = str(record["user_tag"])  # Ожидается GUID как строка
         length = record["length"]
         diameter = record["diameter"]
 
-        logging.info(f"Поиск компонента: {item_desc} с ожидаемым GUID: {user_tag}")
-
         if item_desc in comp_map:
             actual_guid = comp_map[item_desc]
-            logging.info(f"Найден компонент {item_desc} с GUID: {actual_guid}")
             if str(actual_guid) == user_tag:
                 component = ifc_file.by_guid(actual_guid)
                 if component:
@@ -105,15 +82,10 @@ def update_ifc_properties(ifc_file, comp_map, xlsx_data):
                     converted_diameter = diameter if diameter is not None else None
                     update_or_create_property(ifc_file, component, "PipeLength", converted_length)
                     update_or_create_property(ifc_file, component, "PipeDiameter", converted_diameter)
-                    updated_count += 1
-                    logging.info(f"Обновлены свойства для компонента {component.Name} (GUID: {actual_guid})")
-                else:
-                    logging.warning(f"Компонент с GUID {actual_guid} не найден в IFC модели.")
             else:
-                logging.warning(f"GUID компонента {item_desc} ({actual_guid}) не совпадает с ожидаемым ({user_tag})")
+                pass
         else:
-            logging.warning(f"Компонент {item_desc} не найден в PIPE.")
-    logging.info(f"Обновлено {updated_count} компонентов.")
+            pass
 
 def wrap_ifc_value(ifc_file, val):
     """
@@ -129,7 +101,6 @@ def wrap_ifc_value(ifc_file, val):
         else:
             return val
     except Exception as e:
-        logging.error(f"Ошибка при обёртывании значения {val}: {e}")
         return val
 
 def get_length_unit(ifc_file):
@@ -207,7 +178,6 @@ def fix_cyrillic_header(ifc_file):
                 new_file_name.append(s.encode('cp1251', errors='replace').decode('cp1251'))
             else:
                 new_file_name.append(s)
-        # Устанавливаем кодировку в последнем элементе
         if len(new_file_name) < 7:
             new_file_name.extend(["CP1251"] * (7 - len(new_file_name)))
         else:
@@ -227,13 +197,10 @@ def fix_cyrillic_header(ifc_file):
         else:
             new_file_description[1] = "CP1251"
         ifc_file.header["FILE_DESCRIPTION"] = tuple(new_file_description)
-
-        logging.info("Заголовок IFC обновлен для корректного отображения кириллицы (CP1251).")
     except Exception as e:
-        logging.error(f"Ошибка при обновлении заголовка IFC: {e}")
+        pass
 
 def convert_excel_to_ifc(ifc_model, exceltab, output):
-
     ifc_file = load_ifc_model(ifc_model)
     if ifc_file is None:
         return
@@ -246,9 +213,6 @@ def convert_excel_to_ifc(ifc_model, exceltab, output):
     comp_map = extract_component_elements(pipe_elements)
     update_ifc_properties(ifc_file, comp_map, xlsx_data)
     
-    # Обновляем заголовок для корректного отображения кириллицы
     fix_cyrillic_header(ifc_file)
     
     ifc_file.write(output)
-    logging.info(f"Обновлённый IFC сохранён в {output}")
-
