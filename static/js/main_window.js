@@ -1,537 +1,736 @@
 "use strict";
 
-const screenPSIM = document.getElementById("screenPSIM")
-const screenIFC = document.getElementById("screenIFC")
-const titleText = document.getElementById("titleText")
-const btnToggleIFC = document.getElementById("btnToggleIFC")
-const btnDarkMode = document.getElementById("btnDarkMode")
-const btnHelp = document.getElementById("btnHelp")
+// --- Получение элементов DOM ---
+const screenPSIM = document.getElementById("screenPSIM");
+const screenIFC = document.getElementById("screenIFC");
+const titleText = document.getElementById("titleText");
+const btnToggleIFC = document.getElementById("btnToggleIFC");
+const btnDarkMode = document.getElementById("btnDarkMode");
+const btnHelp = document.getElementById("btnHelp");
 
-const btnSelectFile1 = document.getElementById("btnSelectFile1")
-const btnSelectFile2 = document.getElementById("btnSelectFile2")
-const filePath1 = document.getElementById("filePath1")
-const filePath2 = document.getElementById("filePath2")
-const btnConvert = document.getElementById("btnConvert")
+// PSIM Screen Elements
+const btnSelectFile1 = document.getElementById("btnSelectFile1");
+const btnSelectFile2 = document.getElementById("btnSelectFile2");
+const filePath1 = document.getElementById("filePath1");
+const filePath2 = document.getElementById("filePath2");
+const btnConvert = document.getElementById("btnConvert");
 
-const progressContainer = document.getElementById("progressContainer")
-const progressBar = document.getElementById("progressBar")
+// IFC Screen Elements
+const btnSelectIFC = document.getElementById("btnSelectIFC");
+const btnSelectAttrib = document.getElementById("btnSelectAttrib");
+const ifcList = document.getElementById("ifcList"); // Контейнер для списка IFC файлов
+const attribPath = document.getElementById("attribPath");
+const btnConvertIFC = document.getElementById("btnConvertIFC");
 
-const btnSelectIFC = document.getElementById("btnSelectIFC")
-const btnSelectAttrib = document.getElementById("btnSelectAttrib")
-const attribPath = document.getElementById("attribPath")
-const btnConvertIFC = document.getElementById("btnConvertIFC")
+// Common Elements
+const progressContainer = document.getElementById("progressContainer");
+const progressBar = document.getElementById("progressBar");
 
-const btnHistory = document.getElementById("btnHistory")
-const historyModal = new bootstrap.Modal(document.getElementById("historyModal"))
-const historyList = document.getElementById("historyList")
-const historySearch = document.getElementById("historySearch")
-const btnClearAll = document.getElementById("btnClearAll")
+// History Modal Elements
+const btnHistory = document.getElementById("btnHistory");
+const historyModalEl = document.getElementById("historyModal");
+const historyModal = new bootstrap.Modal(historyModalEl);
+const historyList = document.getElementById("historyList");
+const historySearch = document.getElementById("historySearch");
+const btnClearAll = document.getElementById("btnClearAll");
 
-let selectedIFCs = []
-let selectedAttrib = ""
-let selectedFile1 = ""
-let selectedFile2 = ""
+// --- Глобальные переменные состояния ---
+let selectedIFCs = []; // Массив путей к выбранным IFC файлам
+let selectedAttrib = ""; // Путь к файлу атрибутов
+let selectedFile1 = ""; // Путь к первому файлу PSIM
+let selectedFile2 = ""; // Путь ко второму файлу PSIM
+
+// --- Вспомогательные функции ---
 
 function setProgress(p) {
-  progressBar.style.width = p + "%"
-  progressBar.setAttribute("aria-valuenow", p)
+  progressBar.style.width = p + "%";
+  progressBar.setAttribute("aria-valuenow", p);
+  progressBar.textContent = p > 5 ? `${p}%` : ""; // Показываем текст только если прогресс заметен
 }
 
-function formatDateTime(dateObj) {
-  const pad = (n) => String(n).padStart(2, "0")
-  const d = pad(dateObj.getDate())
-  const m = pad(dateObj.getMonth() + 1)
-  const y = dateObj.getFullYear()
-  const hh = pad(dateObj.getHours())
-  const mm = pad(dateObj.getMinutes())
-  const ss = pad(dateObj.getSeconds())
-  return `${d}.${m}.${y} ${hh}:${mm}:${ss}`
+function formatDateTime(isoString) {
+  if (!isoString) return "N/A";
+  try {
+    const dateObj = new Date(isoString);
+    const pad = (n) => String(n).padStart(2, "0");
+    const d = pad(dateObj.getDate());
+    const m = pad(dateObj.getMonth() + 1);
+    const y = dateObj.getFullYear();
+    const hh = pad(dateObj.getHours());
+    const mm = pad(dateObj.getMinutes());
+    const ss = pad(dateObj.getSeconds());
+    return `${d}.${m}.${y} ${hh}:${mm}:${ss}`;
+  } catch (e) {
+    console.error("Error formatting date:", isoString, e);
+    return "Invalid Date";
+  }
+}
+
+// Функция для безопасного отображения текста (предотвращает XSS)
+function escapeHTML(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
 function highlightText(original, search) {
-  if (!search) return original
-  const re = new RegExp(search, "gi")
-  return original.replace(re, (match) => `<span class="highlight">${match}</span>`)
+    if (!search || !original) return escapeHTML(original);
+    // Экранируем спецсимволы в строке поиска для RegExp
+    const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(escapedSearch, "gi");
+    const highlighted = escapeHTML(original).replace(re, (match) => `<span class="highlight">${match}</span>`);
+    return highlighted; // Возвращаем HTML, т.к. он будет вставлен через innerHTML
 }
+
 
 async function fetchJson(url, options = {}) {
-  const response = await fetch(url, options)
-  if (!response.ok) {
-    throw new Error(`Fetch error: ${response.statusText}`)
-  }
-  return response.json()
-}
-
-function loadHistory() {
-  if (!localStorage.getItem("conversionHistory")) {
-    localStorage.setItem("conversionHistory", JSON.stringify([]))
-  }
-}
-
-function addToHistory(file1, file2) {
-  const history = JSON.parse(localStorage.getItem("conversionHistory")) || []
-  history.unshift({
-    time: new Date().toISOString(),
-    file1,
-    file2,
-  })
-  localStorage.setItem("conversionHistory", JSON.stringify(history))
-}
-
-function removeFromHistory(f1, f2) {
-  let history = JSON.parse(localStorage.getItem("conversionHistory")) || []
-  history = history.filter((item) => item.file1 !== f1 || item.file2 !== f2)
-  localStorage.setItem("conversionHistory", JSON.stringify(history))
-}
-
-function renderHistory(filterText = "") {
-  historyList.innerHTML = ""
-  const history = JSON.parse(localStorage.getItem("conversionHistory")) || []
-  if (!history.length) {
-    historyList.innerHTML = '<li class="list-group-item text-muted">История пуста</li>'
-    return
-  }
-  const filtered = history.filter((entry) => {
-    const dateString = formatDateTime(new Date(entry.time))
-    return (
-      dateString.includes(filterText) ||
-      entry.file1.includes(filterText) ||
-      entry.file2.includes(filterText)
-    )
-  })
-  if (!filtered.length) {
-    historyList.innerHTML = '<li class="list-group-item text-muted">Нет совпадений</li>'
-    return
-  }
-  filtered.forEach((entry) => {
-    const li = document.createElement("li")
-    li.className = "list-group-item history-item"
-    const dateObj = new Date(entry.time)
-    const dateString = formatDateTime(dateObj)
-    const dateHtml = highlightText(dateString, filterText)
-    const file1Html = highlightText(entry.file1, filterText)
-    const file2Html = highlightText(entry.file2, filterText)
-
-    li.innerHTML = `
-      <div class="d-flex justify-content-between align-items-center">
-        <small class="text-muted">${dateHtml}</small>
-        <button class="btn btn-danger btn-sm">Удалить</button>
-      </div>
-      <div>
-        <strong>File1:</strong> <pre class="text-break">${file1Html}</pre>
-        <strong>File2:</strong> <pre class="text-break">${file2Html}</pre>
-        <span class="text-secondary" style="font-size: 0.8rem;">(Нажмите, чтобы восстановить)</span>
-      </div>`
-
-    li.addEventListener("click", (evt) => {
-      if (evt.target.tagName.toLowerCase() === "button") return
-      selectedFile1 = entry.file1
-      selectedFile2 = entry.file2
-      if (filePath1 && filePath2) {
-        filePath1.textContent = entry.file1
-        filePath2.textContent = entry.file2
-        filePath1.style.display = "block"
-        filePath2.style.display = "block"
+  try {
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      // Попытаемся прочитать тело ошибки, если оно есть
+      let errorData;
+      try {
+          errorData = await response.json();
+      } catch {
+          errorData = { message: response.statusText };
       }
-      historyModal.hide()
-    })
+      console.error("Fetch error:", response.status, errorData);
+      throw new Error(errorData.message || `HTTP error ${response.status}`);
+    }
+    // Если статус 204 No Content, возвращаем null, а не пытаемся парсить JSON
+    if (response.status === 204) {
+        return null;
+    }
+    return response.json();
+  } catch (error) {
+    console.error("Network or fetch error:", error);
+    // Перебрасываем ошибку для обработки выше
+    throw error;
+  }
+}
 
-    li.querySelector("button").addEventListener("click", async () => {
-      const confirmRes = await Swal.fire({
+
+// --- Функции Истории ---
+
+// Функция для получения иконки и названия типа операции
+function getHistoryEntryTypeDetails(entryType) {
+    switch (entryType) {
+        case "PSIM_TO_ACCE":
+            return { icon: "bi-file-earmark-spreadsheet", label: "PSIM -> ACCE" };
+        case "IFC_UPDATE":
+            return { icon: "bi-box-seam", label: "IFC Update" };
+        // Добавить сюда case для новых типов конвертеров
+        default:
+            return { icon: "bi-question-circle", label: entryType || "Неизвестно" };
+    }
+}
+
+// Функция для рендеринга списка файлов
+function renderFileList(files, listTitle, filterText) {
+    if (!files || !files.length) {
+        return `<small class="text-muted">${escapeHTML(listTitle)}: нет</small>`;
+    }
+    // Ограничим показ, если файлов слишком много
+    const maxVisible = 3;
+    let fileHtml = files.slice(0, maxVisible).map(file => {
+        const name = file.original_name || 'N/A';
+        const errorMark = file.error ? ' <i class="bi bi-exclamation-triangle-fill text-danger" title="Ошибка копирования/отсутствует"></i>' : '';
+        // Используем highlightText для безопасного выделения
+        return `<pre class="text-break d-block mb-0">${highlightText(name, filterText)}${errorMark}</pre>`;
+    }).join('');
+
+    if (files.length > maxVisible) {
+        fileHtml += `<small class="d-block text-muted">(+${files.length - maxVisible} еще)</small>`;
+    }
+
+    return `<strong>${escapeHTML(listTitle)}:</strong>${fileHtml}`;
+}
+
+
+// *** Основная функция рендеринга истории ***
+async function renderHistory(filterText = "") {
+  historyList.innerHTML = '<li class="list-group-item text-muted">Загрузка...</li>'; // Индикатор загрузки
+
+  try {
+    // Загружаем историю с сервера
+    const history = await fetchJson('/get_history'); // GET запрос по умолчанию
+
+    historyList.innerHTML = ''; // Очищаем перед рендерингом
+
+    if (!Array.isArray(history)) {
+         throw new Error("Получен неверный формат истории");
+    }
+
+    if (!history.length) {
+      historyList.innerHTML = '<li class="list-group-item text-muted">История пуста</li>';
+      return;
+    }
+
+    // Фильтрация на клиенте (можно перенести на сервер для больших историй)
+    const filteredHistory = history.filter(entry => {
+      const searchTerm = filterText.toLowerCase();
+      if (!searchTerm) return true; // Если фильтра нет, показываем все
+
+      // Проверка по дате/времени
+      if (formatDateTime(entry.timestamp).toLowerCase().includes(searchTerm)) return true;
+      // Проверка по типу
+      if ((entry.entry_type || '').toLowerCase().includes(searchTerm)) return true;
+      // Проверка по именам входных файлов
+      if (entry.input_files && entry.input_files.some(f => (f.original_name || '').toLowerCase().includes(searchTerm))) return true;
+      // Проверка по именам выходных файлов
+      if (entry.output_files && entry.output_files.some(f => (f.original_name || '').toLowerCase().includes(searchTerm))) return true;
+      // Проверка по сообщению об ошибке
+      if (entry.status === 'error' && (entry.error_message || '').toLowerCase().includes(searchTerm)) return true;
+
+      return false; // Не найдено совпадений
+    });
+
+    if (!filteredHistory.length) {
+      historyList.innerHTML = '<li class="list-group-item text-muted">Нет записей, соответствующих фильтру</li>';
+      return;
+    }
+
+    // Рендеринг отфильтрованных записей
+    filteredHistory.forEach(entry => {
+      const li = document.createElement("li");
+      // Добавляем классы в зависимости от статуса
+      li.className = `list-group-item history-item ${entry.status === 'error' ? 'list-group-item-danger' : ''}`;
+      li.setAttribute('data-entry-id', entry.id); // Сохраняем ID для удаления
+
+      const { icon: typeIcon, label: typeLabel } = getHistoryEntryTypeDetails(entry.entry_type);
+      const dateString = formatDateTime(entry.timestamp);
+      const dateHtml = highlightText(dateString, filterText); // Безопасное выделение
+
+      const statusIcon = entry.status === 'success'
+          ? '<i class="bi bi-check-circle-fill text-success ms-2" title="Успешно"></i>'
+          : '<i class="bi bi-x-octagon-fill text-danger ms-2" title="Ошибка"></i>';
+
+      const inputFilesHtml = renderFileList(entry.input_files, 'Входные файлы', filterText);
+      const outputFilesHtml = renderFileList(entry.output_files, 'Выходные файлы', filterText);
+
+      // Отображаем сообщение об ошибке, если есть
+      const errorHtml = entry.status === 'error' && entry.error_message
+          ? `<div class="mt-1"><small class="text-danger"><strong>Ошибка:</strong> ${highlightText(entry.error_message, filterText)}</small></div>`
+          : '';
+
+      li.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start mb-1">
+          <div>
+            <i class="bi ${typeIcon} me-2"></i>
+            <strong class="me-2">${escapeHTML(typeLabel)}</strong>
+            ${statusIcon}
+          </div>
+          <button class="btn btn-danger btn-sm history-delete-btn" data-entry-id="${entry.id}" title="Удалить запись">
+             <i class="bi bi-trash"></i>
+          </button>
+        </div>
+        <small class="text-muted d-block mb-2">${dateHtml}</small>
+        <div class="mb-1">${inputFilesHtml}</div>
+        <div class="mb-1">${outputFilesHtml}</div>
+        ${errorHtml}`;
+
+      // НЕ добавляем обработчик клика на сам элемент li для "восстановления"
+
+      historyList.appendChild(li);
+    });
+
+    // Добавляем обработчик для кнопок удаления (используем делегирование)
+    historyList.addEventListener('click', handleDeleteClick);
+
+  } catch (err) {
+    console.error("Ошибка при загрузке или рендеринге истории:", err);
+    historyList.innerHTML = `<li class="list-group-item list-group-item-warning">Не удалось загрузить историю: ${escapeHTML(err.message || String(err))}</li>`;
+    // Можно использовать Swal для более заметного сообщения
+    // Swal.fire("Ошибка", `Не удалось загрузить историю: ${err.message || String(err)}`, "error");
+  }
+}
+
+// Обработчик клика на кнопку удаления (делегированный)
+async function handleDeleteClick(event) {
+    const deleteButton = event.target.closest('.history-delete-btn');
+    if (!deleteButton) return; // Клик был не по кнопке удаления
+
+    const entryId = deleteButton.dataset.entryId;
+    if (!entryId) return;
+
+    const confirmRes = await Swal.fire({
         title: "Удалить запись?",
-        text: "Это действие необратимо",
+        text: "Связанные файлы также будут удалены.",
         icon: "warning",
         showCancelButton: true,
-        confirmButtonText: "Да",
+        confirmButtonText: "Да, удалить",
         cancelButtonText: "Отмена",
-      })
-      if (!confirmRes.isConfirmed) return
-      try {
-        const data = await fetchJson("/delete_history_item", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ file1: entry.file1, file2: entry.file2 }),
-        })
-        if (data.status === "ok") {
-          removeFromHistory(entry.file1, entry.file2)
-          renderHistory(filterText)
-        } else {
-          Swal.fire("Ошибка", data.message, "error")
-        }
-      } catch (err) {
-        Swal.fire("Ошибка сети", String(err), "error")
-      }
-    })
-    historyList.appendChild(li)
-  })
-}
+        confirmButtonColor: "#d33", // Красный цвет для кнопки удаления
+    });
 
-function showScreenPSIM() {
-  screenPSIM.classList.add("active")
-  screenIFC.classList.remove("active")
-  titleText.textContent = "Конвертер PSIM (Excel) в ACCE"
-  btnToggleIFC.textContent = "Перейти к IFC"
-  btnToggleIFC.classList.remove("btn-danger")
-  btnToggleIFC.classList.add("btn-warning")
-}
+    if (!confirmRes.isConfirmed) return;
 
-function showScreenIFC() {
-  screenPSIM.classList.remove("active")
-  screenIFC.classList.add("active")
-  titleText.textContent = "Работа с 3D-моделями (IFC)"
-  btnToggleIFC.textContent = "Вернуться к PSIM"
-  btnToggleIFC.classList.remove("btn-warning")
-  btnToggleIFC.classList.add("btn-danger")
-}
-
-function showToastPSIM(title, body, success = true) {
-  const toastEl = document.getElementById("toastPSIM")
-  const toastTitle = document.getElementById("toastPSIMTitle")
-  const toastBody = document.getElementById("toastPSIMBody")
-  const toastTime = document.getElementById("toastPSIMTime")
-  toastTitle.textContent = title
-  toastBody.textContent = body
-  toastTime.textContent = new Date().toLocaleTimeString()
-  toastEl.classList.remove("text-bg-danger", "text-bg-success")
-  toastEl.classList.add(success ? "text-bg-success" : "text-bg-danger")
-  const bsToast = bootstrap.Toast.getOrCreateInstance(toastEl)
-  bsToast.show()
-}
-
-function showToastIFC(title, body, success = true) {
-  const toastEl = document.getElementById("toastIFC")
-  const toastTitle = document.getElementById("toastIFCTitle")
-  const toastBody = document.getElementById("toastIFCBody")
-  const toastTime = document.getElementById("toastIFCTime")
-  toastTitle.textContent = title
-  toastBody.textContent = body
-  toastTime.textContent = new Date().toLocaleTimeString()
-  toastEl.classList.remove("text-bg-danger", "text-bg-success")
-  toastEl.classList.add(success ? "text-bg-success" : "text-bg-danger")
-  const bsToast = bootstrap.Toast.getOrCreateInstance(toastEl)
-  bsToast.show()
-}
-
-function shakeIfEmpty(objOrArray, cardId) {
-  let needShake = false
-  if (Array.isArray(objOrArray)) {
-    if (!objOrArray.length) needShake = true
-  } else {
-    if (!objOrArray) needShake = true
-  }
-  if (needShake) {
-    const el = document.getElementById(cardId)
-    el.classList.add("shake")
-    setTimeout(() => el.classList.remove("shake"), 400)
-  }
-}
-
-async function storeFiles(file1, file2) {
-  try {
-    const data = await fetchJson("/store_history", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file1, file2 }),
-    })
-    if (data.status === "ok") {
-      addToHistory(data.file1, data.file2)
-    } else {
-      showToastPSIM("Ошибка", "Не удалось сохранить файлы: " + data.message, false)
+    try {
+        // Отправляем DELETE запрос
+        await fetchJson(`/delete_history_item/${entryId}`, { method: "DELETE" });
+        // Перерисовываем историю после успешного удаления
+        renderHistory(historySearch.value); // Используем текущее значение фильтра
+        showToast("Успех", "Запись истории удалена", true); // Используем общий тост
+    } catch (err) {
+        console.error(`Ошибка удаления записи ${entryId}:`, err);
+        Swal.fire("Ошибка", `Не удалось удалить запись: ${err.message || String(err)}`, "error");
     }
-  } catch (e) {
-    showToastPSIM("Ошибка", "Ошибка при сохранении в историю: " + e, false)
-  }
 }
 
-btnToggleIFC.addEventListener("click", () => {
-  if (screenPSIM.classList.contains("active")) {
-    showScreenIFC()
-  } else {
-    showScreenPSIM()
-  }
-})
 
-btnDarkMode.addEventListener("click", async () => {
-  const root = document.getElementById("appRoot")
-  const isDarkNow = root.classList.toggle("dark-mode")
-  const newTheme = isDarkNow ? "dark" : "light"
-  try {
-    await pywebview.api.set_theme(newTheme)
-  } catch {}
-})
-
-btnHelp.addEventListener("click", async () => {
-  try {
-    const result = await pywebview.api.open_pdf_manual()
-    if (result === "not_found") {
-      Swal.fire("Ошибка", "PDF не найден. Проверьте сборку приложения.", "error")
-    }
-  } catch (err) {
-    Swal.fire("Ошибка", String(err), "error")
-  }
-})
-
-btnHistory.addEventListener("click", () => {
-  historySearch.value = ""
-  renderHistory()
-  historyModal.show()
-})
-
+// Обработчик кнопки "Очистить всё"
 btnClearAll.addEventListener("click", async () => {
   const confirmRes = await Swal.fire({
     title: "Очистить всю историю?",
-    text: "Это действие необратимо",
+    text: "Это действие необратимо, все записи и файлы будут удалены!",
     icon: "warning",
     showCancelButton: true,
-    confirmButtonText: "Да",
+    confirmButtonText: "Да, очистить всё",
     cancelButtonText: "Отмена",
-  })
-  if (!confirmRes.isConfirmed) return
+    confirmButtonColor: "#d33",
+  });
+
+  if (!confirmRes.isConfirmed) return;
+
   try {
-    const data = await fetchJson("/clear_all_history", { method: "POST" })
-    if (data.status === "ok") {
-      localStorage.setItem("conversionHistory", JSON.stringify([]))
-      renderHistory()
-    } else {
-      Swal.fire("Ошибка очистки", data.message, "error")
+    // Отправляем DELETE запрос
+    await fetchJson("/clear_all_history", { method: "DELETE" });
+    // Просто перерисовываем пустую историю
+    renderHistory();
+    showToast("Успех", "История успешно очищена", true); // Используем общий тост
+  } catch (err) {
+    console.error("Ошибка очистки истории:", err);
+    Swal.fire("Ошибка", `Не удалось очистить историю: ${err.message || String(err)}`, "error");
+  }
+});
+
+
+// --- Управление UI и Конвертацией ---
+
+function showScreenPSIM() {
+  screenPSIM.classList.add("active");
+  screenIFC.classList.remove("active");
+  titleText.textContent = "Конвертер PSIM (Excel) в ACCE";
+  btnToggleIFC.textContent = "Перейти к IFC";
+  btnToggleIFC.classList.remove("btn-danger");
+  btnToggleIFC.classList.add("btn-warning");
+}
+
+function showScreenIFC() {
+  screenPSIM.classList.remove("active");
+  screenIFC.classList.add("active");
+  titleText.textContent = "Работа с 3D-моделями (IFC)";
+  btnToggleIFC.textContent = "Вернуться к PSIM";
+  btnToggleIFC.classList.remove("btn-warning");
+  btnToggleIFC.classList.add("btn-danger");
+}
+
+// Общая функция для показа Toast уведомлений
+function showToast(title, body, success = true, duration = 5000) {
+    // Определяем, какой экран активен, чтобы показать Toast там
+    const activeScreenId = screenPSIM.classList.contains('active') ? 'PSIM' : 'IFC';
+    const toastId = `toast${activeScreenId}`;
+    const toastTitleId = `toast${activeScreenId}Title`;
+    const toastBodyId = `toast${activeScreenId}Body`;
+    const toastTimeId = `toast${activeScreenId}Time`;
+
+    const toastEl = document.getElementById(toastId);
+    const toastTitle = document.getElementById(toastTitleId);
+    const toastBody = document.getElementById(toastBodyId);
+    const toastTime = document.getElementById(toastTimeId);
+
+    if (!toastEl || !toastTitle || !toastBody || !toastTime) {
+        console.error(`Toast elements for ${activeScreenId} not found!`);
+        // Как запасной вариант, используем SweetAlert
+        Swal.fire({
+            toast: true,
+            position: 'bottom-end',
+            icon: success ? 'success' : 'error',
+            title: body, // В тосте Swal лучше кратко
+            showConfirmButton: false,
+            timer: duration,
+            timerProgressBar: true
+        });
+        return;
+    }
+
+    toastTitle.textContent = title;
+    toastBody.textContent = body;
+    toastTime.textContent = new Date().toLocaleTimeString();
+    toastEl.classList.remove("text-bg-danger", "text-bg-success");
+    toastEl.classList.add(success ? "text-bg-success" : "text-bg-danger");
+
+    // Показываем Toast
+    const bsToast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: duration });
+    bsToast.show();
+}
+
+
+// "Встряхивание" карточки, если поле не заполнено
+function shakeIfEmpty(value, cardId) {
+  let isEmpty = false;
+  if (Array.isArray(value)) {
+    isEmpty = !value.length;
+  } else {
+    isEmpty = !value;
+  }
+
+  if (isEmpty) {
+    const el = document.getElementById(cardId);
+    if (el) {
+      el.classList.add("shake");
+      // Убираем класс после завершения анимации
+      setTimeout(() => el.classList.remove("shake"), 400);
+    }
+    return true; // Возвращаем true, если было пусто
+  }
+  return false; // Возвращаем false, если не было пусто
+}
+
+// --- Обработчики событий кнопок ---
+
+btnToggleIFC.addEventListener("click", () => {
+  if (screenPSIM.classList.contains("active")) {
+    showScreenIFC();
+  } else {
+    showScreenPSIM();
+  }
+});
+
+btnDarkMode.addEventListener("click", async () => {
+  const root = document.getElementById("appRoot");
+  const isDarkNow = root.classList.toggle("dark-mode");
+  const newTheme = isDarkNow ? "dark" : "light";
+  try {
+    await pywebview.api.set_theme(newTheme);
+  } catch (e) {
+    console.warn("pywebview.api.set_theme not available?", e);
+  }
+});
+
+btnHelp.addEventListener("click", async () => {
+  try {
+    const result = await pywebview.api.open_pdf_manual();
+    if (result === "not_found") {
+      Swal.fire("Ошибка", "Файл руководства (guide.pdf) не найден.", "error");
     }
   } catch (err) {
-    Swal.fire("Ошибка сети", String(err), "error")
+     console.error("Error opening help:", err);
+     Swal.fire("Ошибка", `Не удалось открыть руководство: ${String(err)}`, "error");
   }
-})
+});
 
+btnHistory.addEventListener("click", () => {
+  historySearch.value = ''; // Сбрасываем поиск при открытии
+  renderHistory(); // Загружаем и отображаем историю
+  historyModal.show();
+});
+
+// Обработчик ввода в поле поиска истории
 historySearch.addEventListener("input", () => {
-  renderHistory(historySearch.value)
-})
+  renderHistory(historySearch.value); // Перерисовываем с учетом фильтра
+});
+
+// --- PSIM Screen Logic ---
 
 btnSelectFile1.addEventListener("click", async () => {
-  filePath1.textContent = ""
-  filePath1.style.display = "none"
+  filePath1.textContent = "";
+  filePath1.style.display = "none";
   try {
-    const path = await pywebview.api.select_source_file()
+    const path = await pywebview.api.select_source_file();
     if (path) {
-      selectedFile1 = path
-      filePath1.textContent = path
-      filePath1.style.display = "block"
+      selectedFile1 = path;
+      filePath1.textContent = path;
+      filePath1.style.display = "block";
     } else {
-      selectedFile1 = ""
+      selectedFile1 = ""; // Сбрасываем, если пользователь отменил выбор
     }
-  } catch {
-    showToastPSIM("Ошибка", "Ошибка при выборе файла #1", false)
+  } catch(err) {
+      console.error("Error selecting file 1:", err);
+      showToast("Ошибка", "Не удалось выбрать файл #1", false);
   }
-})
+});
 
 btnSelectFile2.addEventListener("click", async () => {
-  filePath2.textContent = ""
-  filePath2.style.display = "none"
+  filePath2.textContent = "";
+  filePath2.style.display = "none";
   try {
-    const path = await pywebview.api.select_source_file()
+    const path = await pywebview.api.select_source_file();
     if (path) {
-      selectedFile2 = path
-      filePath2.textContent = path
-      filePath2.style.display = "block"
+      selectedFile2 = path;
+      filePath2.textContent = path;
+      filePath2.style.display = "block";
     } else {
-      selectedFile2 = ""
+      selectedFile2 = "";
     }
-  } catch {
-    showToastPSIM("Ошибка", "Ошибка при выборе файла #2", false)
+  } catch(err) {
+      console.error("Error selecting file 2:", err);
+      showToast("Ошибка", "Не удалось выбрать файл #2", false);
   }
-})
+});
 
 btnConvert.addEventListener("click", async () => {
-  if (!selectedFile1 || !selectedFile2) {
-    shakeIfEmpty(selectedFile1, "psimCard1")
-    shakeIfEmpty(selectedFile2, "psimCard2")
-    showToastPSIM("Ошибка", "Необходимо выбрать оба файла", false)
-    return
+  // Проверяем, выбраны ли оба файла
+  const file1Empty = shakeIfEmpty(selectedFile1, "psimCard1");
+  const file2Empty = shakeIfEmpty(selectedFile2, "psimCard2");
+  if (file1Empty || file2Empty) {
+    showToast("Ошибка", "Необходимо выбрать оба входных файла.", false);
+    return;
   }
-  let outputPath = ""
+
+  // Запрашиваем путь для сохранения
+  let outputPath = "";
   try {
-    outputPath = await pywebview.api.select_save_file_psim()
-  } catch {
-    showToastPSIM("Ошибка", "Ошибка при выборе пути сохранения", false)
-    return
+    outputPath = await pywebview.api.select_save_file_psim(); // Используем специфичный метод, если он есть
+     if (!outputPath) {
+        showToast("Отмена", "Путь для сохранения не выбран.", false);
+        return;
+     }
+  } catch (e) {
+    console.error("Error selecting save path:", e);
+    showToast("Ошибка", "Не удалось выбрать путь сохранения.", false);
+    return;
   }
-  if (!outputPath) {
-    showToastPSIM("Ошибка", "Путь для сохранения не выбран", false)
-    return
-  }
-  progressContainer.style.display = "block"
-  setProgress(10)
+
+
+  // Показываем прогресс и отправляем запрос
+  progressContainer.style.display = "block";
+  setProgress(10);
+
   const payload = {
     inputFile: selectedFile1,
     secondFile: selectedFile2,
     outputFile: outputPath,
-  }
-  setProgress(50)
+  };
+
+  setProgress(30); // Небольшой прогресс перед отправкой
+
   try {
+      // Отправляем запрос на сервер
     const result = await fetchJson("/convert", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    })
-    setProgress(100)
-    progressContainer.style.display = "none"
-    if (result.status === "success") {
-      showToastPSIM("Успех", result.message || "Успешно завершено!", true)
-      storeFiles(selectedFile1, selectedFile2)
-    } else {
-      showToastPSIM("Ошибка", result.message || "Произошла ошибка при конвертации", false)
-    }
-  } catch {
-    progressContainer.style.display = "none"
-    showToastPSIM("Ошибка", "Произошла ошибка. Обратитесь к разработчику.", false)
-  }
-})
+    });
 
-function addIFCItemToUI(path) {
-  let ul = document.getElementById("ifcList")
-  if (!ul) {
-    ul = document.createElement("ul")
-    ul.id = "ifcList"
-    ul.className = "list-group small mt-2"
-    const cardBody = document.getElementById("ifcCard1").querySelector(".file-card-body")
-    cardBody.appendChild(ul)
+    setProgress(100);
+
+    if (result.status === "success") {
+      showToast("Успех", result.message || "Конвертация PSIM -> ACCE завершена!", true);
+      // *** Удален вызов storeFiles() - история сохраняется на бэкенде ***
+    } else {
+      // Ошибка пришла от бэкенда
+      showToast("Ошибка конвертации", result.message || "Произошла ошибка на сервере.", false);
+    }
+  } catch (err) {
+    // Сетевая ошибка или ошибка fetch
+    console.error("Conversion request failed:", err);
+    showToast("Ошибка сети", `Не удалось выполнить конвертацию: ${err.message || String(err)}`, false);
+  } finally {
+    // Скрываем прогресс в любом случае
+     setTimeout(() => { // Небольшая задержка, чтобы увидеть 100%
+        progressContainer.style.display = "none";
+        setProgress(0); // Сброс прогресс-бара
+     }, 500);
   }
-  const li = document.createElement("li")
-  li.className = "list-group-item text-break"
-  li.textContent = path
-  ul.appendChild(li)
+});
+
+
+// --- IFC Screen Logic ---
+
+// Добавляет путь к IFC файлу в UI-список
+function addIFCItemToUI(path) {
+  if (!path) return;
+  const li = document.createElement("li");
+  li.className = "list-group-item text-break p-1"; // Компактный вид
+  li.textContent = path;
+  // Добавить кнопку удаления для элемента списка? (опционально)
+  ifcList.appendChild(li);
+}
+
+// Очистка списка выбранных IFC файлов в UI
+function clearIFCListUI() {
+    ifcList.innerHTML = '';
 }
 
 btnSelectIFC.addEventListener("click", async () => {
   try {
-    const paths = await pywebview.api.select_source_files_ifc()
+    const paths = await pywebview.api.select_source_files_ifc(); // Ожидаем массив путей
     if (paths && paths.length) {
-      paths.forEach((p) => {
-        selectedIFCs.push(p)
-        addIFCItemToUI(p)
-      })
+      // Добавляем только новые уникальные пути
+      paths.forEach(p => {
+          if (p && !selectedIFCs.includes(p)) {
+              selectedIFCs.push(p);
+              addIFCItemToUI(p);
+          }
+      });
     }
-  } catch {
-    showToastIFC("Ошибка", "Ошибка при выборе IFC", false)
+  } catch (err) {
+      console.error("Error selecting IFC files:", err);
+      showToast("Ошибка", "Не удалось выбрать IFC файлы.", false);
   }
-})
+});
 
 btnSelectAttrib.addEventListener("click", async () => {
-  attribPath.textContent = ""
-  attribPath.style.display = "none"
+  attribPath.textContent = "";
+  attribPath.style.display = "none";
   try {
-    const path = await pywebview.api.select_source_file()
+    const path = await pywebview.api.select_source_file();
     if (path) {
-      selectedAttrib = path
-      attribPath.textContent = path
-      attribPath.style.display = "block"
+      selectedAttrib = path;
+      attribPath.textContent = path;
+      attribPath.style.display = "block";
     } else {
-      selectedAttrib = ""
+      selectedAttrib = "";
     }
-  } catch {
-    showToastIFC("Ошибка", "Ошибка при выборе файла атрибутов", false)
+  } catch (err) {
+      console.error("Error selecting attribute file:", err);
+      showToast("Ошибка", "Не удалось выбрать файл атрибутов.", false);
   }
-})
+});
 
 btnConvertIFC.addEventListener("click", async () => {
-  shakeIfEmpty(selectedIFCs, "ifcCard1")
-  shakeIfEmpty(selectedAttrib, "ifcCard2")
-  if (!selectedIFCs.length || !selectedAttrib) {
-    showToastIFC("Ошибка", "Нужно выбрать хотя бы один IFC и один файл атрибутов", false)
-    return
+  // Проверки на заполненность
+  const ifcEmpty = shakeIfEmpty(selectedIFCs, "ifcCard1");
+  const attribEmpty = shakeIfEmpty(selectedAttrib, "ifcCard2");
+  if (ifcEmpty || attribEmpty) {
+    showToast("Ошибка", "Нужно выбрать хотя бы один IFC файл и файл атрибутов.", false);
+    return;
   }
-  let outputFolder = ""
+
+  // Запрашиваем папку для сохранения
+  let outputFolder = "";
   try {
-    outputFolder = await pywebview.api.select_folder_ifc()
-  } catch {
-    showToastIFC("Ошибка", "Ошибка при выборе папки для сохранения", false)
-    return
-  }
-  if (!outputFolder) {
-    showToastIFC("Ошибка", "Папка для сохранения не выбрана", false)
-    return
-  }
-
-  progressContainer.style.display = "block"
-  setProgress(10)
-
-  let current = 0
-  const total = selectedIFCs.length
-  for (let i = 0; i < total; i++) {
-    const ifcFile = selectedIFCs[i]
-    const baseName = ifcFile.split(/[\\/]/).pop().replace(/\.ifc$/i, "")
-    const outFile = `${outputFolder}${window.pywebview ? '\\' : '/'}${baseName}_converted.ifc`
-    current = Math.round((i / total) * 50) + 10
-    setProgress(current)
-
-    const payload = {
-      ifcFile: ifcFile,
-      attribFile: selectedAttrib,
-      outputFile: outFile,
+    outputFolder = await pywebview.api.select_folder_ifc();
+    if (!outputFolder) {
+      showToast("Отмена", "Папка для сохранения не выбрана.", false);
+      return;
     }
-
-    try {
-      const result = await fetchJson("/convert_ifc", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-      if (result.status !== "success") {
-        showToastIFC("Ошибка", `Ошибка: ${ifcFile} => ${result.message}`, false)
-      }
-    } catch {
-      showToastIFC("Ошибка", `Ошибка при конвертации ${ifcFile}`, false)
-    }
+  } catch (e) {
+    console.error("Error selecting output folder:", e);
+    showToast("Ошибка", "Не удалось выбрать папку сохранения.", false);
+    return;
   }
 
-  setProgress(100)
-  progressContainer.style.display = "none"
-  showToastIFC("Успех", "Все выбранные IFC успешно сконвертированы!", true)
-})
+  progressContainer.style.display = "block";
+  setProgress(10);
 
+  const payload = {
+    ifcFiles: selectedIFCs,       // Отправляем массив путей
+    attribFile: selectedAttrib,
+    outputFile: outputFolder,     // Отправляем путь к ПАПКЕ
+  };
+
+  setProgress(30);
+
+  try {
+    // Отправляем один запрос для всех файлов
+    const result = await fetchJson("/convert_ifc", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    setProgress(100);
+
+    if (result.status === "success") {
+      showToast("Успех", result.message || "Обработка IFC завершена!", true);
+    } else {
+      // Бэкенд должен вернуть сообщение об общей ошибке или о первой ошибке
+      showToast("Ошибка обработки IFC", result.message || "Произошла ошибка на сервере.", false);
+       // Можно использовать Swal для более детального отображения ошибок, если они приходят списком
+       // Swal.fire('Ошибка', result.message, 'error');
+    }
+  } catch (err) {
+    console.error("IFC Conversion request failed:", err);
+    showToast("Ошибка сети", `Не удалось обработать IFC файлы: ${err.message || String(err)}`, false);
+  } finally {
+     setTimeout(() => {
+        progressContainer.style.display = "none";
+        setProgress(0);
+     }, 500);
+     // Очищаем список выбранных файлов после попытки конвертации? (опционально)
+     // selectedIFCs = [];
+     // clearIFCListUI();
+     // selectedAttrib = "";
+     // attribPath.textContent = "";
+     // attribPath.style.display = "none";
+  }
+});
+
+
+// --- Глобальные функции API и Drag & Drop ---
+
+// Вызывается из Python при перетаскивании IFC файла
 window.addIFCFile = (path) => {
-  selectedIFCs.push(path)
-  addIFCItemToUI(path)
-}
-
-window.selectFile = (type, path) => {
-  if (type === "psim1") {
-    selectedFile1 = path
-  } else if (type === "psim2") {
-    selectedFile2 = path
-  } else if (type === "attrib") {
-    selectedAttrib = path
-    attribPath.textContent = path
-    attribPath.style.display = "block"
+  if (path && !selectedIFCs.includes(path)) {
+    selectedIFCs.push(path);
+    addIFCItemToUI(path);
   }
-}
+};
+
+// Вызывается из Python при перетаскивании PSIM или Attrib файла
+window.selectFile = (type, path) => {
+  if (!path) return;
+  if (type === "psim1") {
+    selectedFile1 = path;
+    filePath1.textContent = path;
+    filePath1.style.display = "block";
+  } else if (type === "psim2") {
+    selectedFile2 = path;
+    filePath2.textContent = path;
+    filePath2.style.display = "block";
+  } else if (type === "attrib") {
+    selectedAttrib = path;
+    attribPath.textContent = path;
+    attribPath.style.display = "block";
+  }
+};
+
+// --- Горячие клавиши и инициализация ---
 
 document.addEventListener("keydown", (e) => {
+  // Ctrl+H для истории
   if (e.ctrlKey && e.key.toLowerCase() === "h") {
-    e.preventDefault()
-    btnHistory.click()
+    e.preventDefault();
+    btnHistory.click(); // Открываем модальное окно
   }
-  if (e.key === "Escape") {
-    historyModal.hide()
+  // Escape для закрытия модального окна истории
+  if (e.key === "Escape" && historyModalEl.classList.contains('show')) {
+    historyModal.hide();
   }
-})
+});
 
+// Ожидание инициализации pywebview API
 async function waitForPywebview() {
   while (typeof pywebview === "undefined" || !pywebview.api) {
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await new Promise(resolve => setTimeout(resolve, 50));
   }
 }
 
-
+// Инициализация приложения
 async function initApp() {
-  await waitForPywebview()
+  await waitForPywebview(); // Ждем, пока API Python будет доступно
 
-  loadHistory()
-
-  const theme = await pywebview.api.get_theme()
-
-  if (theme === "dark") {
-    document.getElementById("appRoot").classList.add("dark-mode")
+  // Загружаем тему
+  try {
+    const theme = await pywebview.api.get_theme();
+    if (theme === "dark") {
+      document.getElementById("appRoot").classList.add("dark-mode");
+    }
+  } catch(e) {
+      console.warn("Could not get theme from pywebview", e);
   }
 
-  showScreenPSIM()
+  // *** Удалена начальная загрузка истории из localStorage ***
+  // Начальное отображение истории при загрузке не требуется,
+  // она загрузится при первом открытии модального окна.
+  // Если нужно показывать сразу, раскомментировать:
+  // renderHistory();
+
+  showScreenPSIM(); // Показываем первый экран по умолчанию
 }
 
-document.addEventListener("DOMContentLoaded", initApp)
+// Запускаем инициализацию после загрузки DOM
+document.addEventListener("DOMContentLoaded", initApp);
