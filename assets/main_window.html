@@ -202,6 +202,15 @@
           font-weight: bold;
       }
 
+      .list-group-item.history-item:hover {
+         background-color: rgba(0, 0, 0, 0.05);
+      }
+
+      
+      .dark-mode .list-group-item.history-item:hover {
+          background-color: rgba(255, 255, 255, 0.08);
+      }
+
       .list-group-item.history-item {
           cursor: pointer;
       }
@@ -350,25 +359,26 @@
   </div>
 </div>
 <div class="modal fade" id="historyModal" tabindex="-1" aria-labelledby="historyModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-scrollable" style="max-width: 600px;">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="historyModalLabel">История конвертаций</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
-      </div>
-      <div class="modal-body">
-        <div class="input-group mb-3">
-          <span class="input-group-text">Поиск:</span>
-          <input id="historySearch" type="text" class="form-control" placeholder="Введите дату/время"/>
-          <button id="btnClearAll" class="btn btn-danger btn-sm ms-2">Очистить всё</button>
+    <div class="modal-dialog modal-dialog-scrollable" style="max-width: 600px;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="historyModalLabel">История конвертаций</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
         </div>
-        <ul id="historyList" class="list-group"></ul>
-        <p class="text-muted mt-2" style="font-size: 0.875rem;">Нажмите на элемент истории, чтобы восстановить выбранные
-          файлы.</p>
+        <div class="modal-body">
+          <div class="input-group mb-3">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input id="historySearch" type="text" class="form-control" placeholder="Поиск по дате, типу, файлам..."/>
+            <button id="btnClearAll" class="btn btn-danger" title="Очистить всю историю">
+                <i class="bi bi-trash-fill"></i> Очистить всё
+            </button>
+          </div>
+          <ul id="historyList" class="list-group">
+            </ul>
+          </div>
       </div>
     </div>
   </div>
-</div>
 <script src="{{ url_for('static', filename='js/sweetalert2.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='js/main_window.js') }}"></script>
