@@ -72,6 +72,16 @@ class Bridge:
             subprocess.Popen(["xdg-open", pdf_path])
         return "ok"
 
+    def select_save_file_ifc(self):
+        if not window:
+            return ""
+        result = window.create_file_dialog(
+            webview.SAVE_DIALOG,
+            directory='.',
+            save_filename='ifc_result.ifc'
+        )
+        return result if result else ""
+
     def select_source_file(self):
         if not window:
             return ""

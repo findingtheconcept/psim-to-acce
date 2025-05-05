@@ -202,6 +202,15 @@
           font-weight: bold;
       }
 
+      .list-group-item.history-item:hover {
+          background-color: rgba(0, 0, 0, 0.05);
+      }
+
+
+      .dark-mode .list-group-item.history-item:hover {
+          background-color: rgba(255, 255, 255, 0.08);
+      }
+
       .list-group-item.history-item {
           cursor: pointer;
       }
@@ -247,6 +256,10 @@
       .toast {
           max-width: 300px;
       }
+
+      #transferOldPath, #transferNewPath {
+          max-width: 100%;
+      }
   </style>
 
   <script src="{{ url_for('static', filename='js/sweetalert2.min.js') }}"></script>
@@ -256,11 +269,16 @@
 <div class="app-container" id="appRoot">
   <div class="title-bar">
     <span id="titleText">Конвертер PSIM (Excel) в ACCE</span>
-    <div>
-      <button id="btnDarkMode" class="btn btn-secondary btn-sm me-2"><i class="bi bi-moon"></i></button>
-      <button id="btnToggleIFC" class="btn btn-warning btn-sm me-2">Перейти к IFC</button>
-      <button id="btnHelp" class="btn btn-info btn-sm me-2">Помощь</button>
-      <button id="btnHistory" class="btn btn-light btn-sm">История</button>
+    <div class="btn-group">
+      <button id="btnDarkMode" class="btn btn-secondary btn-sm" title="Тёмная/светлая тема"><i class="bi bi-moon"></i>
+      </button>
+      <button id="btnNavPSIM" class="btn btn-outline-light btn-sm active">PSIM</button>
+      <button id="btnNavIFCUpd" class="btn btn-outline-warning btn-sm">IFC ⇄ Excel</button>
+      <button id="btnNavIFCTrn" class="btn btn-outline-info btn-sm">IFC ⇄ IFC</button>
+      <button id="btnHelp" class="btn btn-outline-info btn-sm" title="Руководство"><i class="bi bi-question-circle"></i>
+      </button>
+      <button id="btnHistory" class="btn btn-light     btn-sm" title="История"><i class="bi bi-clock-history"></i>
+      </button>
     </div>
   </div>
   <div id="screenPSIM" class="content app-screen active">
@@ -271,7 +289,6 @@
           <button id="btnSelectFile1" class="btn btn-outline-primary mb-3"><i class="bi bi-folder2-open"></i> Выбрать
             файл
           </button>
-          <p class="text-muted small mb-2">Или перетащите файл сюда</p>
           <pre id="filePath1" class="mt-2 text-muted" style="display: none;"></pre>
         </div>
       </div>
@@ -281,7 +298,6 @@
           <button id="btnSelectFile2" class="btn btn-outline-primary mb-3"><i class="bi bi-folder2-open"></i> Выбрать
             файл
           </button>
-          <p class="text-muted small mb-2">Или перетащите файл сюда</p>
           <pre id="filePath2" class="mt-2 text-muted" style="display: none;"></pre>
         </div>
       </div>
@@ -317,7 +333,6 @@
           <button id="btnSelectIFC" class="btn btn-outline-primary mb-3">
             <i class="bi bi-folder2-open"></i> Выбрать IFC (несколько)
           </button>
-          <p class="text-muted small mb-2">Или перетащите модель сюда</p>
           <ul id="ifcList" class="list-group small mt-2" style="max-height:120px; overflow:auto;"></ul>
         </div>
       </div>
@@ -327,7 +342,6 @@
           <button id="btnSelectAttrib" class="btn btn-outline-primary mb-3"><i class="bi bi-folder2-open"></i> Выбрать
             файл
           </button>
-          <p class="text-muted small mb-2">Или перетащите атрибуты сюда</p>
           <pre id="attribPath" class="mt-2 text-muted" style="display: none;"></pre>
         </div>
       </div>
@@ -348,6 +362,48 @@
       </div>
     </div>
   </div>
+  <div id="screenIFCTransfer" class="content app-screen">
+    <div class="file-selection-row">
+      <!-- old IFC -->
+      <div class="file-card" id="ifcOldCard">
+        <div class="file-card-header">Старая IFC-модель (источник данных)</div>
+        <div class="file-card-body">
+          <button id="btnSelectOldIFC" class="btn btn-outline-primary mb-3">
+            <i class="bi bi-folder2-open"></i> Выбрать IFC
+          </button>
+          <pre id="transferOldPath" class="mt-2 text-muted" style="display:none;"></pre>
+        </div>
+      </div>
+
+      <!-- new IFC -->
+      <div class="file-card" id="ifcNewCard">
+        <div class="file-card-header">Новая IFC-модель</div>
+        <div class="file-card-body">
+          <button id="btnSelectNewIFC" class="btn btn-outline-primary mb-3">
+            <i class="bi bi-folder2-open"></i> Выбрать IFC
+          </button>
+          <pre id="transferNewPath" class="mt-2 text-muted" style="display:none;"></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="button-row">
+      <button id="btnConvertIFCTransfer" class="btn btn-success btn-lg shadow-sm">
+        <i class="bi bi-arrow-right-square"></i> Перенести данные
+      </button>
+    </div>
+
+    <div class="toast-container">
+      <div id="toastIFCTransfer" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+          <strong class="me-auto" id="toastIFCTransferTitle"></strong>
+          <small id="toastIFCTransferTime"></small>
+          <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toastIFCTransferBody"></div>
+      </div>
+    </div>
+  </div>
 </div>
 <div class="modal fade" id="historyModal" tabindex="-1" aria-labelledby="historyModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-scrollable" style="max-width: 600px;">
@@ -358,17 +414,20 @@
       </div>
       <div class="modal-body">
         <div class="input-group mb-3">
-          <span class="input-group-text">Поиск:</span>
-          <input id="historySearch" type="text" class="form-control" placeholder="Введите дату/время"/>
-          <button id="btnClearAll" class="btn btn-danger btn-sm ms-2">Очистить всё</button>
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input id="historySearch" type="text" class="form-control" placeholder="Поиск по дате, типу, файлам..."/>
+          <button id="btnClearAll" class="btn btn-danger" title="Очистить всю историю">
+            <i class="bi bi-trash-fill"></i> Очистить всё
+          </button>
         </div>
-        <ul id="historyList" class="list-group"></ul>
-        <p class="text-muted mt-2" style="font-size: 0.875rem;">Нажмите на элемент истории, чтобы восстановить выбранные
-          файлы.</p>
+        <ul id="historyList" class="list-group">
+        </ul>
       </div>
     </div>
   </div>
 </div>
-<script defer src="{{ url_for('static', filename='js/main_window.js') }}"></script>
+<script src="{{ url_for('static', filename='js/sweetalert2.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='js/main_window.js') }}"></script>
 </body>
 </html>

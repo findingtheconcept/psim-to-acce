@@ -62,11 +62,15 @@ def build_windows():
         print("Removed existing build.spec file.")
 
     # Prepare PyInstaller command
+    icon_path = os.path.join(project_dir, 'assets', 'app_icon.ico')
+
     pyinstaller_cmd = [
         sys.executable, '-m', 'PyInstaller',
         '--clean',
         '--onefile',
         '--windowed',
+        '--noconfirm',
+        '--icon', icon_path,
         '--add-data', f"{assets_dir}{os.path.pathsep}assets",
         '--add-data', f"{static_dir}{os.path.pathsep}static",
     ]
