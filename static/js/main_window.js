@@ -223,8 +223,8 @@ function highlightText(original, search) {
  * Обработчики верхних кнопок
  *******************************************************************/
 btnDarkMode.addEventListener("click", async () => {
-  const root = document.getElementById("appRoot");
-  const isDark = root.classList.toggle("dark-mode");
+  // const root = document.getElementById("appRoot"); // <-- Удаляем эту строку
+  const isDark = document.body.classList.toggle("dark-mode"); // <-- Меняем на document.body
   try {
     await pywebview.api.set_theme(isDark ? "dark" : "light");
   } catch {
@@ -467,7 +467,7 @@ btnClearAll.addEventListener("click", async () => {
 
   try {
     await fetchJson("/clear_all_history", { method: "DELETE" });
-    renderHistory();
+    renderHistory(historySearch.value); // Перерисовываем с текущим фильтром после очистки
     showToast("Успех", "История успешно очищена", true);
   } catch (err) {
     console.error("Ошибка очистки истории:", err);
@@ -483,7 +483,7 @@ function getHistoryEntryTypeDetails(entryType) {
         case "IFC_UPDATE":
             return { icon: "bi-arrow-repeat", label: "Excel → IFC" };
         case "IFC_TRANSFER": // Added the new type
-            return { icon: "bi-arrow-left-right", label: "IFC → IFC" };
+            return { icon: "bi-arrows-expand", label: "IFC → IFC" };
         default:
             return { icon: "bi-question-circle", label: entryType || "Неизвестно" };
     }
@@ -760,8 +760,12 @@ async function waitForPywebview() {
 (async function init() {
   await waitForPywebview();
   try {
-    if (await pywebview.api.get_theme() === "dark") {
-        document.getElementById("appRoot").classList.add("dark-mode");
+    // if (await pywebview.api.get_theme() === "dark") { // <-- Удаляем эту строку
+    //     document.getElementById("appRoot").classList.add("dark-mode"); // <-- Удаляем эту строку
+    // }
+    const theme = await pywebview.api.get_theme(); // <-- Получаем тему
+    if (theme === "dark") { // <-- Проверяем тему
+        document.body.classList.add("dark-mode"); // <-- Добавляем класс к body
     }
     renderHistory();
   } catch {
