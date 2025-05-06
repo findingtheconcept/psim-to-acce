@@ -7,7 +7,7 @@ from converter import convert_psim_to_asse
 from ifc_converter import convert_excel_to_ifc
 from utils import HistoryManager
 
-# TODO: from ifc_transfer import transfer_properties_between_ifc
+from ifc_to_ifc_converter import process_ifc_files
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +153,7 @@ def transfer_ifc_route():
         return jsonify({"status": "error", "message": "Не заполнены все поля."}), 400
 
     try:
-        # transfer_properties_between_ifc(old_ifc, new_ifc, output)
+        process_ifc_files(old_ifc, new_ifc, output)
 
         HistoryManager.add_entry(
             entry_type="IFC_TRANSFER",

@@ -61,6 +61,35 @@ let selectedAttrib = "";
 let selectedOldIFC = "";   // для переноса атрибутов
 let selectedNewIFC = "";
 
+async function fetchJson(url, options = {}) {
+  try {
+    const response = await fetch(url, options);
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { message: response.statusText };
+      }
+      console.error("Fetch error:", response.status, errorData);
+      throw new Error(errorData.message || `HTTP error ${response.status}`);
+    }
+
+    if (response.status === 204) return null;
+
+    try {
+      return await response.json();
+    } catch (e) {
+      console.warn("Empty/invalid JSON from", url);
+      return null;
+    }
+  } catch (error) {
+    console.error("Network or fetch error:", error);
+    throw error;
+  }
+}
+
 /********************************************************************
  *  Навигация между экранами
  *******************************************************************/
