@@ -15,7 +15,6 @@ import json
 import webview
 from flask import Flask
 from routes import bp as main_bp
-from webview.dom import DOMEventHandler
 from utils import get_app_folder
 
 if hasattr(sys, '_MEIPASS'):
@@ -141,65 +140,12 @@ def run_flask():
         logger.error(f"Error starting Flask back-end: {e}")
 
 
-def bind_drag_and_drop():
-    def on_drag_enter(e):
-        t = e['target'].get('id')
-        if t in ('psimCard1', 'psimCard2', 'ifcCard1', 'ifcCard2'):
-            window.evaluate_js(f'document.getElementById("{t}").classList.add("dragover")')
-
-    def on_drag_over(e):
-        e.prevent_default()
-
-    def on_drag_leave(e):
-        t = e['target'].get('id')
-        if t in ('psimCard1', 'psimCard2', 'ifcCard1', 'ifcCard2'):
-            window.evaluate_js(f'document.getElementById("{t}").classList.remove("dragover")')
-
-    def on_drop(e):
-        e.prevent_default()
-        fs = e['dataTransfer']['files']
-        if not fs:
-            return
-        t = e['target'].get('id')
-        window.evaluate_js(f'document.getElementById("{t}").classList.remove("dragover")')
-
-        path = fs[0].get('pywebviewFullPath', '')
-
-        if t == 'psimCard1':
-            window.evaluate_js(
-                f'document.getElementById("filePath1").textContent="{path}";'
-                f'document.getElementById("filePath1").style.display="block";'
-                f'window.selectFile("psim1","{path}");'
-            )
-        elif t == 'psimCard2':
-            window.evaluate_js(
-                f'document.getElementById("filePath2").textContent="{path}";'
-                f'document.getElementById("filePath2").style.display="block";'
-                f'window.selectFile("psim2","{path}");'
-            )
-        elif t == 'ifcCard1':
-            window.evaluate_js(
-                f'window.addIFCFile("{path}");'
-            )
-        elif t == 'ifcCard2':
-            window.evaluate_js(
-                f'document.getElementById("attribPath").textContent="{path}";'
-                f'document.getElementById("attribPath").style.display="block";'
-                f'window.selectFile("attrib","{path}");'
-            )
-
-    doc = window.dom.document
-    doc.events.dragenter += DOMEventHandler(on_drag_enter, True, True)
-    doc.events.dragover += DOMEventHandler(on_drag_over, True, True)
-    doc.events.dragleave += DOMEventHandler(on_drag_leave, True, True)
-    doc.events.drop += DOMEventHandler(on_drop, True, True)
-
-
 if __name__ == "__main__":
     thread = Thread(target=run_flask, daemon=True)
     thread.start()
 
     bridge = Bridge()
+
     window = webview.create_window(
         title='PSIM to ACCE',
         url='http://127.0.0.1:5000',
@@ -209,4 +155,4 @@ if __name__ == "__main__":
         js_api=bridge,
     )
 
-    webview.start(bind_drag_and_drop, window)
+    webview.start()
