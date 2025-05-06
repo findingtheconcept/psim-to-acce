@@ -327,7 +327,7 @@
       </button>
       <button id="btnNavIFCUpd" class="btn btn-outline-warning btn-sm d-flex align-items-center gap-1">
         <i class="bi bi-arrow-repeat"></i>
-        IFC → Excel
+        Excel → IFC
       </button>
       <button id="btnNavIFCTrn" class="btn btn-outline-info btn-sm d-flex align-items-center gap-1">
         <i class="bi bi-arrow-left-right"></i>
@@ -342,12 +342,17 @@
         История
       </button>
     </div>
-
+  </div>
+  <div id="progressContainer" style="display: none; padding: 0.5rem 1rem;">
+    <div class="progress">
+      <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+           style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
   </div>
   <div id="screenPSIM" class="content app-screen active">
     <div class="file-selection-row">
       <div class="file-card" id="psimCard1">
-        <div class="file-card-header">Входной файл #1 (ПСИМ)</div>
+        <div class="file-card-header">Входной файл #1 (АССЕ)</div>
         <div class="file-card-body">
           <button id="btnSelectFile1" class="btn btn-outline-primary mb-3"><i class="bi bi-folder2-open"></i> Выбрать
             файл
@@ -356,7 +361,7 @@
         </div>
       </div>
       <div class="file-card" id="psimCard2">
-        <div class="file-card-header">Входной файл #2 (АССЕ)</div>
+        <div class="file-card-header">Входной файл #2 (ПСИМ)</div>
         <div class="file-card-body">
           <button id="btnSelectFile2" class="btn btn-outline-primary mb-3"><i class="bi bi-folder2-open"></i> Выбрать
             файл
@@ -369,12 +374,6 @@
       <button id="btnConvert" class="btn btn-success btn-lg shadow-sm"><i class="bi bi-arrow-right-square"></i>
         Конвертировать
       </button>
-    </div>
-    <div id="progressContainer">
-      <div class="progress">
-        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
-             style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-      </div>
     </div>
     <div class="toast-container">
       <div id="toastPSIM" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
