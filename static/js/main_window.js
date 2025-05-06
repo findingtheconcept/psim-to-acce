@@ -1,7 +1,7 @@
 "use strict";
 
 /********************************************************************
- *  Переменные DOM
+ * Переменные DOM
  *******************************************************************/
 const screenPSIM = document.getElementById("screenPSIM");
 const screenIFC = document.getElementById("screenIFC");
@@ -50,7 +50,7 @@ const progressContainer = document.getElementById("progressContainer");
 const progressBar = document.getElementById("progressBar");
 
 /********************************************************************
- *  Состояние приложения
+ * Состояние приложения
  *******************************************************************/
 let selectedFile1 = "";
 let selectedFile2 = "";
@@ -91,13 +91,26 @@ async function fetchJson(url, options = {}) {
 }
 
 /********************************************************************
- *  Навигация между экранами
+ * Навигация между экранами
  *******************************************************************/
 function activateNavButton(activeBtn) {
   [btnNavPSIM, btnNavIFCUpd, btnNavIFCTrn].forEach(b => {
     b.classList.toggle("active", b === activeBtn);
+    // Also manage outline vs non-outline based on active state
+    if (b === activeBtn) {
+        b.classList.remove('btn-outline-light', 'btn-outline-warning', 'btn-outline-info');
+        if (b === btnNavPSIM) b.classList.add('btn-light');
+        if (b === btnNavIFCUpd) b.classList.add('btn-warning');
+        if (b === btnNavIFCTrn) b.classList.add('btn-info');
+    } else {
+         if (b === btnNavPSIM) b.classList.add('btn-outline-light');
+        if (b === btnNavIFCUpd) b.classList.add('btn-outline-warning');
+        if (b === btnNavIFCTrn) b.classList.add('btn-outline-info');
+         b.classList.remove('btn-light', 'btn-warning', 'btn-info');
+    }
   });
 }
+
 
 function showScreen(node, title) {
   [screenPSIM, screenIFC, screenTransfer].forEach(s => s.classList.remove("active"));
@@ -121,7 +134,7 @@ btnNavIFCTrn.addEventListener("click", () => {
 });
 
 /********************************************************************
- *  Утилиты
+ * Утилиты
  *******************************************************************/
 function setProgress(p) {
   progressBar.style.width = p + "%";
@@ -172,8 +185,42 @@ function showToast(title, body, success = true, duration = 5000) {
   bootstrap.Toast.getOrCreateInstance(toastEl, {delay: duration}).show();
 }
 
+function formatDateTime(isoString) {
+  if (!isoString) return "N/A";
+  try {
+    const dateObj = new Date(isoString);
+    const pad = (n) => String(n).padStart(2, "0");
+    const d = pad(dateObj.getDate());
+    const m = pad(dateObj.getMonth() + 1);
+    const y = dateObj.getFullYear();
+    const hh = pad(dateObj.getHours());
+    const mm = pad(dateObj.getMinutes());
+    const ss = pad(dateObj.getSeconds());
+    return `${d}.${m}.${y} ${hh}:${mm}:${ss}`;
+  } catch (e) {
+    console.error("Error formatting date:", isoString, e);
+    return "Invalid Date";
+  }
+}
+
+function escapeHTML(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function highlightText(original, search) {
+    if (!search || !original) return escapeHTML(original);
+    const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(escapedSearch, "gi");
+    const highlighted = escapeHTML(original).replace(re, (match) => `<span class="highlight">${match}</span>`);
+    return highlighted;
+}
+
+
 /********************************************************************
- *  Обработчики верхних кнопок
+ * Обработчики верхних кнопок
  *******************************************************************/
 btnDarkMode.addEventListener("click", async () => {
   const root = document.getElementById("appRoot");
@@ -194,9 +241,16 @@ btnHelp.addEventListener("click", async () => {
   }
 });
 
+btnHistory.addEventListener("click", () => {
+  historySearch.value = "";
+  renderHistory();
+  historyModal.show();
+});
+
+
 /********************************************************************
- *  ---  ДАЛЬШЕ ИДУТ ОБРАБОТЧИКИ КОНКРЕТНЫХ ЭКРАНОВ
- *  (PSIM, IFC-update, IFC-transfer)
+ * ---  ДАЛЬШЕ ИДУТ ОБРАБОТЧИКИ КОНКРЕТНЫХ ЭКРАНОВ
+ * (PSIM, IFC-update, IFC-transfer)
  *******************************************************************/
 // --- 1. PSIM → ACCE ------------------------------------------------
 btnSelectFile1.addEventListener("click", selectFile1);
@@ -227,7 +281,10 @@ async function convertPSIM() {
     return;
   }
   const out = await pywebview.api.select_save_file_psim();
-  if (!out) return;
+  if (!out) {
+      showToast("Отмена", "Путь для сохранения не выбран.", false);
+      return;
+  }
 
   progressContainer.style.display = "block";
   setProgress(20);
@@ -257,13 +314,20 @@ btnSelectAttrib.addEventListener("click", selectAttrib);
 btnConvertIFC.addEventListener("click", convertIFC);
 
 async function selectIFCs() {
-  const paths = await pywebview.api.select_source_files_ifc();
-  paths?.forEach(p => {
-    if (p && !selectedIFCs.includes(p)) {
-      selectedIFCs.push(p);
-      addIFCItemToUI(p);
-    }
-  });
+  try {
+      const paths = await pywebview.api.select_source_files_ifc();
+      if (paths && paths.length) {
+          paths.forEach(p => {
+              if (p && !selectedIFCs.includes(p)) {
+                  selectedIFCs.push(p);
+                  addIFCItemToUI(p);
+              }
+          });
+      }
+  } catch (err) {
+      console.error("Error selecting IFC files:", err);
+      showToast("Ошибка", "Не удалось выбрать IFC файлы.", false);
+  }
 }
 
 function addIFCItemToUI(p) {
@@ -273,12 +337,26 @@ function addIFCItemToUI(p) {
   ifcList.appendChild(li);
 }
 
+function clearIFCListUI() {
+    ifcList.innerHTML = '';
+}
+
+
 async function selectAttrib() {
-  const p = await pywebview.api.select_source_file();
-  if (p) {
-    selectedAttrib = p;
-    attribPath.textContent = p;
-    attribPath.style.display = "block";
+  try {
+      const p = await pywebview.api.select_source_file();
+      if (p) {
+          selectedAttrib = p;
+          attribPath.textContent = p;
+          attribPath.style.display = "block";
+      } else {
+          selectedAttrib = "";
+          attribPath.textContent = "";
+          attribPath.style.display = "none";
+      }
+  } catch (err) {
+      console.error("Error selecting attribute file:", err);
+      showToast("Ошибка", "Не удалось выбрать файл атрибутов.", false);
   }
 }
 
@@ -288,7 +366,10 @@ async function convertIFC() {
     return;
   }
   const outDir = await pywebview.api.select_folder_ifc();
-  if (!outDir) return;
+  if (!outDir) {
+      showToast("Отмена", "Папка для сохранения не выбрана.", false);
+      return;
+  }
   progressContainer.style.display = "block";
   setProgress(20);
   try {
@@ -335,7 +416,10 @@ async function transferIFC() {
     return;
   }
   const out = await pywebview.api.select_save_file_ifc();
-  if (!out) return;
+  if (!out) {
+      showToast("Отмена", "Путь для сохранения не выбран.", false);
+      return;
+  }
   progressContainer.style.display = "block";
   setProgress(15);
   try {
@@ -358,7 +442,7 @@ async function transferIFC() {
 }
 
 /********************************************************************
- *  История (минимально: только открытие/поиск/очистка)
+ * История
  *******************************************************************/
 btnHistory.addEventListener("click", () => {
   historySearch.value = "";
@@ -369,39 +453,305 @@ btnHistory.addEventListener("click", () => {
 historySearch.addEventListener("input", () => renderHistory(historySearch.value));
 
 btnClearAll.addEventListener("click", async () => {
-  const c = await Swal.fire({
+  const confirmRes = await Swal.fire({
     title: "Очистить всю историю?",
+    text: "Это действие необратимо, все записи и файлы будут удалены!",
     icon: "warning",
     showCancelButton: true,
+    confirmButtonText: "Да, очистить всё",
+    cancelButtonText: "Отмена",
     confirmButtonColor: "#d33",
-    confirmButtonText: "Да"
   });
-  if (!c.isConfirmed) return;
-  await fetchJson("/clear_all_history", {method: "DELETE"});
-  renderHistory();
-  showToast("Успех", "История очищена", true);
+
+  if (!confirmRes.isConfirmed) return;
+
+  try {
+    await fetchJson("/clear_all_history", { method: "DELETE" });
+    renderHistory();
+    showToast("Успех", "История успешно очищена", true);
+  } catch (err) {
+    console.error("Ошибка очистки истории:", err);
+    Swal.fire("Ошибка", `Не удалось очистить историю: ${err.message || String(err)}`, "error");
+  }
 });
 
-async function renderHistory(filter = "") {
-  historyList.innerHTML = "<li class='list-group-item text-muted'>Загрузка…</li>";
+
+function getHistoryEntryTypeDetails(entryType) {
+    switch (entryType) {
+        case "PSIM_TO_ACCE":
+            return { icon: "bi-file-earmark-spreadsheet", label: "PSIM → ACCE" };
+        case "IFC_UPDATE":
+            return { icon: "bi-arrow-repeat", label: "Excel → IFC" };
+        case "IFC_TRANSFER": // Added the new type
+            return { icon: "bi-arrow-left-right", label: "IFC → IFC" };
+        default:
+            return { icon: "bi-question-circle", label: entryType || "Неизвестно" };
+    }
+}
+
+function renderFileList(files, listTitle, filterText) {
+    if (!files || !files.length) {
+        return `<small class="text-muted">${escapeHTML(listTitle)}: нет</small>`;
+    }
+    const maxVisible = 3; // Show first 3 files
+    let fileHtml = files.slice(0, maxVisible).map(file => {
+        const name = file.original_name || 'N/A';
+        const errorMark = file.error ? ' <i class="bi bi-exclamation-triangle-fill text-danger" title="Ошибка копирования/отсутствует"></i>' : '';
+        return `<pre class="text-break d-block mb-0">${highlightText(name, filterText)}${errorMark}</pre>`;
+    }).join('');
+
+    if (files.length > maxVisible) {
+        fileHtml += `<small class="d-block text-muted">(+${files.length - maxVisible} еще)</small>`;
+    }
+
+    return `<strong>${escapeHTML(listTitle)}:</strong>${fileHtml}`;
+}
+
+
+async function renderHistory(filterText = "") {
+  historyList.innerHTML = '<li class="list-group-item text-muted">Загрузка...</li>';
+
   try {
-    const data = await fetchJson("/get_history");
-    const list = Array.isArray(data) ? data : [];
-    historyList.innerHTML = list.length ? "" : "<li class='list-group-item text-muted'>История пуста</li>";
-    list.forEach(e => {
+    const history = await fetchJson('/get_history');
+
+    historyList.innerHTML = '';
+
+    if (!Array.isArray(history)) {
+         throw new Error("Получен неверный формат истории");
+    }
+
+    if (!history.length) {
+      historyList.innerHTML = '<li class="list-group-item text-muted">История пуста</li>';
+      return;
+    }
+
+    const filteredHistory = history.filter(entry => {
+      const searchTerm = filterText.toLowerCase();
+      if (!searchTerm) return true;
+
+      // Filter by timestamp
+      if (formatDateTime(entry.timestamp).toLowerCase().includes(searchTerm)) return true;
+
+      // Filter by entry type label
+      const { label: typeLabel } = getHistoryEntryTypeDetails(entry.entry_type);
+      if (typeLabel.toLowerCase().includes(searchTerm)) return true;
+
+      // Filter by input file names
+      if (entry.input_files && entry.input_files.some(f => (f.original_name || '').toLowerCase().includes(searchTerm))) return true;
+
+      // Filter by output file names
+      if (entry.output_files && entry.output_files.some(f => (f.original_name || '').toLowerCase().includes(searchTerm))) return true;
+
+      // Filter by error message
+      if (entry.status === 'error' && (entry.error_message || '').toLowerCase().includes(searchTerm)) return true;
+
+
+      return false;
+
+    });
+
+    if (!filteredHistory.length) {
+      historyList.innerHTML = '<li class="list-group-item text-muted">Нет записей, соответствующих фильтру</li>';
+      return;
+    }
+
+    // Sort by timestamp descending
+    filteredHistory.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+
+    filteredHistory.forEach(entry => {
       const li = document.createElement("li");
-      li.className = "list-group-item history-item";
-      li.textContent = `${e.entry_type} — ${new Date(e.timestamp).toLocaleString()}`;
+
+      li.className = `list-group-item history-item ${entry.status === 'error' ? 'list-group-item-danger' : ''}`;
+      li.setAttribute('data-entry-id', entry.id);
+
+      const { icon: typeIcon, label: typeLabel } = getHistoryEntryTypeDetails(entry.entry_type);
+      const dateString = formatDateTime(entry.timestamp);
+      const dateHtml = highlightText(dateString, filterText);
+
+      const statusIcon = entry.status === 'success'
+          ? '<i class="bi bi-check-circle-fill text-success ms-2" title="Успешно"></i>'
+          : '<i class="bi bi-x-octagon-fill text-danger ms-2" title="Ошибка"></i>';
+
+      const inputFilesHtml = renderFileList(entry.input_files, 'Входные файлы', filterText);
+      const outputFilesHtml = renderFileList(entry.output_files, 'Выходные файлы', filterText);
+
+      const errorHtml = entry.status === 'error' && entry.error_message
+          ? `<div class="mt-1"><small class="text-danger"><strong>Ошибка:</strong> ${highlightText(entry.error_message, filterText)}</small></div>`
+          : '';
+
+      li.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start mb-1">
+          <div>
+            <i class="bi ${typeIcon} me-2"></i>
+            <strong class="me-2">${escapeHTML(typeLabel)}</strong>
+            ${statusIcon}
+          </div>
+          <button class="btn btn-danger btn-sm history-delete-btn" data-entry-id="${entry.id}" title="Удалить запись">
+             <i class="bi bi-trash"></i>
+          </button>
+        </div>
+        <small class="text-muted d-block mb-2">${dateHtml}</small>
+        <div class="mb-1">${inputFilesHtml}</div>
+        <div class="mb-1">${outputFilesHtml}</div>
+        ${errorHtml}
+        ${entry.input_files && entry.input_files.some(f => f.saved_path && !f.error) ? '<span class="text-secondary" style="font-size: 0.8rem;">(Нажмите, чтобы восстановить)</span>' : '<span class="text-warning" style="font-size: 0.8rem;">(Нет файлов для восстановления)</span>'}
+      `;
+
       historyList.appendChild(li);
     });
-  } catch (e) {
-    console.error(e);
-    historyList.innerHTML = "<li class='list-group-item list-group-item-danger'>Ошибка загрузки истории</li>";
+
+
+    historyList.removeEventListener('click', handleDeleteClick);
+    historyList.removeEventListener('click', handleRestoreClick);
+
+    historyList.addEventListener('click', handleDeleteClick);
+    historyList.addEventListener('click', handleRestoreClick);
+
+
+  } catch (err) {
+    console.error("Ошибка при загрузке или рендеринге истории:", err);
+    historyList.innerHTML = `<li class="list-group-item list-group-item-warning">Не удалось загрузить историю: ${escapeHTML(err.message || String(err))}</li>`;
   }
 }
 
+
+async function handleDeleteClick(event) {
+    const deleteButton = event.target.closest('.history-delete-btn');
+    if (!deleteButton) return;
+
+    const entryId = deleteButton.dataset.entryId;
+    if (!entryId) return;
+
+    const confirmRes = await Swal.fire({
+        title: "Удалить запись?",
+        text: "Связанные файлы также будут удалены из архива.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Да, удалить",
+        cancelButtonText: "Отмена",
+        confirmButtonColor: "#d33",
+    });
+
+    if (!confirmRes.isConfirmed) return;
+
+    try {
+        await fetchJson(`/delete_history_item/${entryId}`, { method: "DELETE" });
+        renderHistory(historySearch.value);
+        showToast("Успех", "Запись истории удалена", true);
+    } catch (err) {
+        console.error(`Ошибка удаления записи ${entryId}:`, err);
+        Swal.fire("Ошибка", `Не удалось удалить запись: ${err.message || String(err)}`, "error");
+    }
+}
+
+
+async function handleRestoreClick(event) {
+  const historyItem = event.target.closest('.history-item');
+  if (!historyItem || event.target.closest('.history-delete-btn')) {
+      return;
+  }
+
+  const entryId = historyItem.dataset.entryId;
+  if (!entryId) return;
+
+  console.log("Attempting to restore history entry:", entryId);
+
+  try {
+      const entryDetails = await fetchJson(`/get_history_entry/${entryId}`);
+
+      if (!entryDetails || !entryDetails.entry_type || !entryDetails.input_files) {
+          throw new Error("Неполные данные записи из истории.");
+      }
+
+      const hasRestorableFiles = entryDetails.input_files.some(file => file.saved_path && !file.error);
+      if (!hasRestorableFiles) {
+           showToast("Информация", "Для этой записи нет файлов, доступных для восстановления.", false);
+           return;
+      }
+
+
+      if (entryDetails.entry_type === "PSIM_TO_ACCE") {
+          const psimFiles = entryDetails.input_files.filter(file => file.saved_path && !file.error);
+
+          if (psimFiles.length >= 2) {
+              const file1 = psimFiles[0];
+              const file2 = psimFiles[1];
+
+              selectedFile1 = file1.saved_path;
+              selectedFile2 = file2.saved_path;
+
+              filePath1.textContent = file1.original_name;
+              filePath2.textContent = file2.original_name;
+              filePath1.style.display = "block";
+              filePath2.style.display = "block";
+
+              showScreen(screenPSIM, "Конвертер PSIM → ACCE");
+              activateNavButton(btnNavPSIM);
+              historyModal.hide();
+              showToast("Успех", "Файлы из истории загружены в PSIM конвертер.", true);
+          } else {
+              showToast("Информация", "Недостаточно входных файлов для восстановления записи PSIM → ACCE.", false);
+          }
+      } else if (entryDetails.entry_type === "IFC_UPDATE") {
+          const restorableIFCUpdateFiles = entryDetails.input_files.filter(file => file.saved_path && !file.error);
+
+          const restoredIFCs = restorableIFCUpdateFiles.filter(file => file.original_name.toLowerCase().endsWith('.ifc'));
+          const restoredAttrib = restorableIFCUpdateFiles.find(file => file.original_name.toLowerCase().endsWith('.xlsx'));
+
+          if (restoredIFCs.length > 0 && restoredAttrib) {
+              selectedIFCs = restoredIFCs.map(f => f.saved_path);
+              selectedAttrib = restoredAttrib.saved_path;
+
+              clearIFCListUI();
+              restoredIFCs.forEach(ifc => addIFCItemToUI(ifc.original_name));
+
+              attribPath.textContent = restoredAttrib.original_name;
+              attribPath.style.display = "block";
+
+              showScreen(screenIFC, "Обновление IFC из Excel");
+              activateNavButton(btnNavIFCUpd);
+              historyModal.hide();
+              showToast("Успех", "Файлы из истории загружены в IFC (обновление) конвертер.", true);
+          } else {
+               showToast("Информация", "Не найдены необходимые IFC файлы или файл атрибутов для восстановления записи Excel → IFC.", false);
+          }
+      } else if (entryDetails.entry_type === "IFC_TRANSFER") {
+           const restorableIFCTransferFiles = entryDetails.input_files.filter(file => file.saved_path && !file.error);
+
+           const oldIFC = restorableIFCTransferFiles.find(file => file.original_name.includes("старая") && file.original_name.toLowerCase().endsWith('.ifc'));
+           const newIFC = restorableIFCTransferFiles.find(file => file.original_name.includes("новая") && file.original_name.toLowerCase().endsWith('.ifc'));
+
+           if (oldIFC && newIFC) {
+               selectedOldIFC = oldIFC.saved_path;
+               selectedNewIFC = newIFC.saved_path;
+
+               transferOldPath.textContent = oldIFC.original_name;
+               transferNewPath.textContent = newIFC.original_name;
+               transferOldPath.style.display = "block";
+               transferNewPath.style.display = "block";
+
+               showScreen(screenTransfer, "Перенос данных между IFC");
+               activateNavButton(btnNavIFCTrn);
+               historyModal.hide();
+               showToast("Успех", "Файлы из истории загружены в IFC (перенос) конвертер.", true);
+           } else {
+               showToast("Информация", "Не найдены обе IFC модели для восстановления записи IFC → IFC.", false);
+           }
+
+      } else {
+          showToast("Информация", `Тип записи '${getHistoryEntryTypeDetails(entryDetails.entry_type).label}' пока не поддерживает восстановление через интерфейс.`, false);
+      }
+
+  } catch (err) {
+      console.error(`Ошибка восстановления записи ${entryId}:`, err);
+      Swal.fire("Ошибка", `Не удалось восстановить файлы из истории: ${err.message || String(err)}`, "error");
+  }
+}
+
+
 /********************************************************************
- *  Инициализация
+ * Инициализация
  *******************************************************************/
 async function waitForPywebview() {
   while (typeof pywebview === "undefined" || !pywebview.api) await new Promise(r => setTimeout(r, 50));
@@ -410,8 +760,12 @@ async function waitForPywebview() {
 (async function init() {
   await waitForPywebview();
   try {
-    if (await pywebview.api.get_theme() === "dark") document.getElementById("appRoot").classList.add("dark-mode");
+    if (await pywebview.api.get_theme() === "dark") {
+        document.getElementById("appRoot").classList.add("dark-mode");
+    }
+    renderHistory();
   } catch {
   }
   showScreen(screenPSIM, "Конвертер PSIM → ACCE");
+  activateNavButton(btnNavPSIM);
 })();
