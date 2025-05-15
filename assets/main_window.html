@@ -32,6 +32,9 @@
           background: #222 !important;
           border-bottom: 1px solid #555 !important;
       }
+      .dark-mode .form-check-label { 
+          color: #e5e5e5 !important;
+      }
 
       .dark-mode .file-card {
           background: #202020 !important;
@@ -88,14 +91,53 @@
           border: 1px solid #555 !important;
       }
 
-      .dark-mode .input-group-text {
-          background-color: #333 !important;
+      .dark-mode .list-group-item.history-item.list-group-item-danger {
+          background-color: #773333 !important;
+          color: #fff !important;
+      }
+
+      .dark-mode .input-group .input-group-text {
+          background-color: #3a3a3a !important;
           color: #f0f0f0 !important;
+          border-color: #555 !important;
+      }
+
+      .dark-mode .input-group .form-control {
+           background-color: #333 !important;
+           color: #f0f0f0 !important;
+           border-color: #555 !important;
+      }
+
+      .dark-mode .input-group {
+           border-color: #555 !important;
+      }
+
+
+      .dark-mode .form-control::placeholder {
+           color: #aaa !important;
       }
 
       .dark-mode .btn.btn-danger.btn-sm.ms-2 {
           background-color: #773333 !important;
           border: none !important;
+      }
+
+      .dark-mode .modal-body::-webkit-scrollbar {
+          width: 8px;
+      }
+
+      .dark-mode .modal-body::-webkit-scrollbar-track {
+          background: #333;
+          border-radius: 10px;
+      }
+
+      .dark-mode .modal-body::-webkit-scrollbar-thumb {
+          background: #555;
+          border-radius: 10px;
+      }
+
+      .dark-mode .modal-body::-webkit-scrollbar-thumb:hover {
+          background: #777;
       }
 
       .app-container {
@@ -113,7 +155,14 @@
           border-bottom: 1px solid #006abb;
           display: flex;
           align-items: center;
-          justify-content: space-between;
+      }
+
+      .title-bar .form-check-input {
+          cursor: pointer;
+      }
+      .title-bar .form-check-label {
+          cursor: pointer;
+          color: #fff; 
       }
 
       .content {
@@ -202,10 +251,14 @@
           font-weight: bold;
       }
 
+      .dark-mode .highlight {
+          background-color: #664d03;
+          color: #fff;
+      }
+
       .list-group-item.history-item:hover {
           background-color: rgba(0, 0, 0, 0.05);
       }
-
 
       .dark-mode .list-group-item.history-item:hover {
           background-color: rgba(255, 255, 255, 0.08);
@@ -226,21 +279,11 @@
       }
 
       @keyframes shake {
-          0% {
-              transform: translate(0, 0);
-          }
-          25% {
-              transform: translate(-5px, 0);
-          }
-          50% {
-              transform: translate(5px, 0);
-          }
-          75% {
-              transform: translate(-5px, 0);
-          }
-          100% {
-              transform: translate(0, 0);
-          }
+          0% { transform: translate(0, 0); }
+          25% { transform: translate(-5px, 0); }
+          50% { transform: translate(5px, 0); }
+          75% { transform: translate(-5px, 0); }
+          100% { transform: translate(0, 0); }
       }
 
       .toast-container {
@@ -253,60 +296,127 @@
           gap: 0.5rem;
       }
 
-      .toast {
-          max-width: 300px;
+      .title-bar .btn-group.me-3 {
+          background-color: #c2c2c2;
+          padding: 0 px;
+          border-radius: 4px;
       }
 
-      #transferOldPath, #transferNewPath {
-          max-width: 100%;
+      .dark-mode .title-bar .btn-group.me-3 {
+          background-color: #2c2c2c;
       }
 
-      .btn i {
-          pointer-events: none;
+      .btn-group .btn.btn-light:not(.active) {
+          background-color: rgba(255, 255, 255, 0.4);
+          color: #212529;
+          border-color: rgba(248, 249, 250, 0.6);
       }
 
-      .btn-sm i {
-          font-size: 1rem;
+      .btn-group .btn.btn-warning:not(.active) {
+          background-color: rgba(255, 193, 7, 0.4);
+          color: #212529;
+          border-color: rgba(255, 193, 7, 0.6);
       }
 
-      .btn:has(i):hover i {
-          background: none !important;
+      .btn-group .btn.btn-info:not(.active) {
+          background-color: rgba(23, 162, 184, 0.4);
+          color: #fff;
+          border-color: rgba(23, 162, 184, 0.6);
       }
 
-      .btn i {
-          display: inline-block;
-          width: 1.25em;
-          text-align: center;
+      .btn-group .btn.btn-outline-secondary:not(.active) {
+          background-color: transparent;
+          color: #6c757d;
+          border-color: #6c757d;
       }
 
-      .btn {
-          overflow: hidden;
-          cursor: pointer;
+      .btn-group .btn.active.btn-light {
+          box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.8);
+          border-radius: 0.1rem;
       }
 
-      .btn-icon i {
-          font-size: 1rem;
-          pointer-events: none;
+      .btn-group .btn.active.btn-warning {
+          box-shadow: 0 0 0 0.25rem rgba(255, 193, 7, 0.7);
+          border-radius: 0.1rem;
       }
 
-      .btn-group .btn-icon {
-          border-radius: 0.25rem !important;
-          overflow: hidden;
-          white-space: nowrap;
+      .btn-group .btn.active.btn-info {
+          box-shadow: 0 0 0 0.25rem rgba(23, 162, 184, 0.7); 
+          border-radius: 0.1rem;
       }
 
-      .btn-group .btn i {
-          pointer-events: none;
-          font-size: 1rem;
+      .form-check-input[type="checkbox"] {
+          transform: scale(1.2);
+          margin-right: 0.5rem;
       }
 
-      .btn-group .btn {
-          white-space: nowrap;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+      .form-check-label #darkModeIcon.bi-sun-fill {
+          font-size: 1.2em;
+          margin-left: -0.2rem;
+          vertical-align: middle;
       }
 
+      #btnHistory {
+          background-color: transparent !important; 
+          color: #fff !important;
+      }
+
+      #btnHelp {
+          background-color: transparent !important; 
+          color: #fff !important;
+      }
+
+      #btnHistory:hover {
+          background-color: rgba(255, 255, 255, 0.2) !important;
+          color: #fff !important; 
+      }
+
+      .dark-mode #btnHistory:hover {
+          background-color: rgba(255, 255, 255, 0.1) !important;
+          color: #e5e5e5 !important;
+      }
+      #btnHistory:hover {
+          background-color: rgba(255, 255, 255, 0.2) !important;
+          color: #fff !important; 
+      }
+   
+      #btnHelp:hover {
+          background-color: rgba(255, 255, 255, 0.2) !important;
+          color: #fff !important;
+      }
+
+      .dark-mode #btnHelp:hover {
+          background-color: rgba(255, 255, 255, 0.1) !important;
+          color: #e5e5e5 !important;
+      }
+
+      .dark-mode #btnHistory {
+          color: #e5e5e5 !important; 
+      }
+
+      .dark-mode .title-bar .btn-group .btn.active {
+          color: #000 !important; 
+      }
+
+      .dark-mode .title-bar .btn-group .btn:not(.active) {
+          color: #fff !important; 
+      }
+
+      .title-bar .btn-group .btn {
+          color: #000 !important; 
+      }
+
+      .toast { max-width: 300px; }
+      #transferOldPath, #transferNewPath { max-width: 100%; }
+      .btn i { pointer-events: none; }
+      .btn-sm i { font-size: 1rem; }
+      .btn:has(i):hover i { background: none !important; }
+      .btn i { display: inline-block; width: 1.25em; text-align: center; }
+      .btn { overflow: hidden; cursor: pointer; }
+      .btn-icon i { font-size: 1rem; pointer-events: none; }
+      .btn-group .btn-icon { border-radius: 0.25rem !important; overflow: hidden; white-space: nowrap; }
+      .btn-group .btn i { pointer-events: none; font-size: 1rem; }
+      .btn-group .btn { white-space: nowrap; display: flex; align-items: center; justify-content: center; }
   </style>
 
   <script src="{{ url_for('static', filename='js/sweetalert2.min.js') }}"></script>
@@ -315,34 +425,41 @@
 <body>
 <div class="app-container" id="appRoot">
   <div class="title-bar">
-    <span id="titleText">Конвертер ПСИМ (Excel) в АССЕ</span>
-    <div class="btn-group" role="group" aria-label="Navigation buttons">
-      <button id="btnDarkMode" class="btn btn-secondary btn-sm d-flex align-items-center gap-1"
-              title="Тёмная/светлая тема">
-        <i class="bi bi-moon"></i>
-      </button>
-      <button id="btnNavPSIM" class="btn btn-outline-light btn-sm d-flex align-items-center gap-1 active">
-        <i class="bi bi-file-earmark-excel"></i>
-        ПСИМ → АССЕ
-      </button>
-      <button id="btnNavIFCUpd" class="btn btn-outline-warning btn-sm d-flex align-items-center gap-1">
-        <i class="bi bi-arrow-repeat"></i>
-        Excel → IFC
-      </button>
-      <button id="btnNavIFCTrn" class="btn btn-outline-info btn-sm d-flex align-items-center gap-1">
-        <i class="bi bi-arrow-left-right"></i>
-        IFC → IFC
-      </button>
-      <button id="btnHelp" class="btn btn-outline-info btn-sm d-flex align-items-center gap-1" title="Руководство">
-        <i class="bi bi-question-circle"></i>
-        Справка
-      </button>
-      <button id="btnHistory" class="btn btn-light btn-sm d-flex align-items-center gap-1" title="История">
-        <i class="bi bi-clock-history"></i>
-        История
-      </button>
+    <div class="form-check form-switch d-flex align-items-center">
+        <input class="form-check-input" type="checkbox" role="switch" id="darkModeSwitch">
+        <label class="form-check-label ms-2" for="darkModeSwitch"><i id="darkModeIcon" class="bi bi-moon-stars-fill"></i></label>
     </div>
-  </div>
+
+    <div style="flex-grow: 1;"></div>
+
+    <div class="d-flex align-items-center">
+        <div class="btn-group me-3" role="group" aria-label="Navigation buttons">
+            <button id="btnNavPSIM" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 active">
+                <i class="bi bi-file-earmark-spreadsheet"></i>
+                ПСИМ → АССЕ
+            </button>
+            <button id="btnNavIFCUpd" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+                <i class="bi bi-file-earmark-plus"></i>
+                Excel → IFC
+            </button>
+            <button id="btnNavIFCTrn" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+                <i class="bi bi-file-earmark-arrow-up"></i>
+                IFC → IFC
+            </button>
+        </div>
+
+        <div class="btn-group" role="group" aria-label="Utility buttons">
+            <button id="btnHelp" class="btn btn-light btn-sm d-flex align-items-center gap-1">
+                <i class="bi bi-question-circle"></i>
+                Справка
+            </button>
+            <button id="btnHistory" class="btn btn-light btn-sm d-flex align-items-center gap-1">
+                <i class="bi bi-clock-history"></i>
+                История
+            </button>
+        </div>
+    </div>
+</div>
   <div id="progressContainer" style="display: none; padding: 0.5rem 1rem;">
     <div class="progress">
       <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
@@ -350,6 +467,7 @@
     </div>
   </div>
   <div id="screenPSIM" class="content app-screen active">
+    <h4 class="mb-3">Конвертер ПСИМ -> АССЕ</h4>
     <div class="file-selection-row">
       <div class="file-card" id="psimCard1">
         <div class="file-card-header">Входной файл #1 (АССЕ)</div>
@@ -371,7 +489,7 @@
       </div>
     </div>
     <div class="button-row">
-      <button id="btnConvert" class="btn btn-success btn-lg shadow-sm"><i class="bi bi-arrow-right-square"></i>
+      <button id="btnConvert" class="btn btn-success btn-lg shadow-sm"><i class="bi bi-arrow-repeat"></i>
         Конвертировать
       </button>
     </div>
@@ -387,13 +505,13 @@
     </div>
   </div>
   <div id="screenIFC" class="content app-screen">
-    <h4 class="mb-4">Работа с 3D-моделями (IFC)</h4>
+    <h4 class="mb-3">Обновление IFC из Excel</h4>
     <div class="file-selection-row">
       <div class="file-card" id="ifcCard1">
         <div class="file-card-header">Выбор 3D модели(-ей)</div>
         <div class="file-card-body">
           <button id="btnSelectIFC" class="btn btn-outline-primary mb-3">
-            <i class="bi bi-folder2-open"></i> Выбрать IFC (несколько)
+            <i class="bi bi-box-seam"></i> Выбрать IFC (несколько)
           </button>
           <ul id="ifcList" class="list-group small mt-2" style="max-height:120px; overflow:auto;"></ul>
         </div>
@@ -401,7 +519,7 @@
       <div class="file-card" id="ifcCard2">
         <div class="file-card-header">Атрибуты (одна таблица формата АССЕ)</div>
         <div class="file-card-body">
-          <button id="btnSelectAttrib" class="btn btn-outline-primary mb-3"><i class="bi bi-folder2-open"></i> Выбрать
+          <button id="btnSelectAttrib" class="btn btn-outline-primary mb-3"><i class="bi bi-file-earmark-spreadsheet"></i> Выбрать
             файл
           </button>
           <pre id="attribPath" class="mt-2 text-muted" style="display: none;"></pre>
@@ -410,7 +528,7 @@
     </div>
     <div class="button-row">
       <button id="btnConvertIFC" class="btn btn-success btn-lg shadow-sm">
-        <i class="bi bi-arrow-right-square"></i> Конвертировать
+        <i class="bi bi-file-earmark-plus"></i> Обновить данные
       </button>
     </div>
     <div class="toast-container">
@@ -425,12 +543,13 @@
     </div>
   </div>
   <div id="screenIFCTransfer" class="content app-screen">
+    <h4 class="mb-3">Перенос данных между IFC</h4>
     <div class="file-selection-row">
       <div class="file-card" id="ifcOldCard">
         <div class="file-card-header">Старая IFC-модель (источник данных)</div>
         <div class="file-card-body">
           <button id="btnSelectOldIFC" class="btn btn-outline-primary mb-3">
-            <i class="bi bi-folder2-open"></i> Выбрать IFC
+            <i class="bi bi-box-arrow-down"></i> Выбрать IFC
           </button>
           <pre id="transferOldPath" class="mt-2 text-muted" style="display:none;"></pre>
         </div>
@@ -440,7 +559,7 @@
         <div class="file-card-header">Новая IFC-модель</div>
         <div class="file-card-body">
           <button id="btnSelectNewIFC" class="btn btn-outline-primary mb-3">
-            <i class="bi bi-folder2-open"></i> Выбрать IFC
+            <i class="bi bi-box-arrow-in-up"></i> Выбрать IFC
           </button>
           <pre id="transferNewPath" class="mt-2 text-muted" style="display:none;"></pre>
         </div>
@@ -449,7 +568,7 @@
 
     <div class="button-row">
       <button id="btnConvertIFCTransfer" class="btn btn-success btn-lg shadow-sm">
-        <i class="bi bi-arrow-right-square"></i> Перенести данные
+        <i class="bi bi-file-earmark-arrow-up"></i> Перенести данные
       </button>
     </div>
 
@@ -469,7 +588,7 @@
   <div class="modal-dialog modal-dialog-scrollable" style="max-width: 600px;">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="historyModalLabel">История конвертаций</h5>
+        <h5 class="modal-title" id="historyModalLabel"><i class="bi bi-clock-history me-2"></i>История операций</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
       </div>
       <div class="modal-body">
@@ -477,7 +596,7 @@
           <span class="input-group-text"><i class="bi bi-search"></i></span>
           <input id="historySearch" type="text" class="form-control" placeholder="Поиск по дате, типу, файлам..."/>
           <button id="btnClearAll" class="btn btn-danger" title="Очистить всю историю">
-            <i class="bi bi-trash-fill"></i> Очистить всё
+            <i class="bi bi-trash3-fill"></i> Очистить всё
           </button>
         </div>
         <ul id="historyList" class="list-group">
